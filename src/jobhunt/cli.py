@@ -23,6 +23,7 @@ from jobhunt.http import PoliteClient
 from jobhunt.keywords import coverage, posting_terms
 from jobhunt.models import JobAnalysis, Preferences
 from jobhunt.profile import validate as validate_profile
+from jobhunt.salary import suggest as suggest_salary
 from jobhunt.policy import decide, listing_filter_reason
 from jobhunt.sources import startups_argentina
 from jobhunt.store import Store
@@ -53,6 +54,8 @@ def cmd_fetch(args, store: Store) -> None:
     new = filtered = details = 0
     with PoliteClient(delay_s=args.delay) as client:
         stubs = list(source.iter_listing(client, max_pages=args.max_pages))
+        # Solo con el listado completo se puede saber qué avisos se cerraron.
+        gone = [] if args.max_pages else store.mark_gone(source.SOURCE, {s.id for s in stubs})
         for stub in stubs:
             new += store.upsert_stub(stub)
             if listing_filter_reason(stub.title, stub.location, prefs):
@@ -75,7 +78,8 @@ def cmd_fetch(args, store: Store) -> None:
             store.commit()
     print(json.dumps({
         "listed": len(stubs), "new": new, "filtered_by_title": filtered,
-        "details_fetched": details, "description_from_ats": backfilled,
+        "details_fetched": details, "closed_since_last_fetch": len(gone),
+        "description_from_ats": backfilled,
         "description_unavailable": unavailable, "status_counts": store.counts(),
     }, ensure_ascii=False, indent=1))
 
@@ -145,18 +149,48 @@ def cmd_analyze(args, store: Store) -> None:
                       "reasons": decision.reasons}, ensure_ascii=False))
 
 
-def cmd_report(args, store: Store) -> None:
-    rows = store.ranked()
-    if args.decision:
-        rows = [r for r in rows if r["decision"] in args.decision]
-    print("| # | Decisión | Score | Puesto | Empresa | Familia | Seniority | ATS | Motivos |")
-    print("|---|---|---|---|---|---|---|---|---|")
+def _ranking_table(rows) -> list[str]:
+    lines = ["| # | Decisión | Score | Puesto | Empresa | Familia | Seniority | ATS | Postulación | Motivos |",
+             "|---|---|---|---|---|---|---|---|---|---|"]
     for i, r in enumerate(rows, 1):
         a = json.loads(r["analysis"])
         reasons = "; ".join(json.loads(r["decision_reasons"])) or "—"
-        print(f"| {i} | {r['decision']} | {r['fit_score']} | [{r['title']}]({r['url']}) "
-              f"| {r['company']} | {a['role_family']} | {a['seniority']} | {r['ats']} | {reasons} |")
+        lines.append(
+            f"| {i} | {r['decision']} | {r['fit_score']} | [{r['title']}]({r['url']}) | {r['company']} "
+            f"| {a['role_family']} | {a['seniority']} | {r['ats']} | {r['app_status'] or '—'} | {reasons} |")
+    return lines
+
+
+def cmd_report(args, store: Store) -> None:
+    rows = store.ranked(include_gone=args.all, since=args.since)
+    if args.decision:
+        rows = [r for r in rows if r["decision"] in args.decision]
+    if args.new:
+        rows = [r for r in rows if not r["app_status"]]
+    print("\n".join(_ranking_table(rows)))
     print(f"\nEstados: {store.counts()}")
+
+
+def cmd_digest(args, store: Store) -> None:
+    from datetime import date, datetime
+
+    rows = store.ranked(since=args.since)
+    candidates = [r for r in rows if r["decision"] in ("apply", "maybe") and not r["app_status"]]
+    counts = {d: sum(r["decision"] == d for r in rows) for d in ("apply", "maybe", "skip")}
+    out = [f"# Ciclo de búsqueda — {date.today().isoformat()}", ""]
+    out.append(f"Avisos nuevos analizados{' desde ' + args.since if args.since else ''}: "
+               f"{len(rows)} ({counts['apply']} aplicar, {counts['maybe']} dudosos, {counts['skip']} descartados).")
+    out += ["", "## Para decidir", ""]
+    out += _ranking_table(candidates) if candidates else ["Nada nuevo que valga la pena."]
+    out += ["", "## Postulaciones", "", "| Estado | Score | Puesto | Empresa | Hace | Aviso | Nota |",
+            "|---|---|---|---|---|---|---|"]
+    today = datetime.now().date()
+    for r in store.applications():
+        days = (today - datetime.fromisoformat(r["updated_at"]).date()).days
+        closed = "cerrado" if r["job_status"] == "gone" else "publicado"
+        out.append(f"| {r['status']} | {r['fit_score'] or '—'} | {r['title']} | {r['company']} "
+                   f"| {days} días | {closed} | {r['note'] or '—'} |")
+    print("\n".join(out))
 
 
 def cmd_schema(args, store: Store | None = None) -> None:
@@ -340,6 +374,22 @@ def cmd_cv_sources(args) -> None:
         show(f"proyecto {project.title}", project.text, project.source_ids)
 
 
+def cmd_salary(args, store: Store) -> None:
+    analysis = store.analysis(args.job_id)
+    if not analysis:
+        sys.exit(f"{args.job_id} no tiene análisis.")
+    parsed = JobAnalysis.model_validate_json(analysis["analysis"])
+    try:
+        s = suggest_salary(parsed, load_prefs(), market=args.market)
+    except ValueError as err:
+        sys.exit(str(err))
+    print(json.dumps({
+        "ask_usd_month": s.ask, "acceptable_range": [s.low, s.high], "band": s.band,
+        "market": args.market or parsed.employer_market, "source": s.source,
+        "rationale": s.rationale,
+    }, ensure_ascii=False, indent=1))
+
+
 def cmd_cv_check(args) -> None:
     sys.exit(0 if run_check(load_cv(args.doc)) else 1)
 
@@ -379,7 +429,14 @@ def main(argv: list[str] | None = None) -> None:
 
     p = sub.add_parser("report", help="Ranking de avisos analizados")
     p.add_argument("--decision", nargs="*", choices=["apply", "maybe", "skip"])
+    p.add_argument("--new", action="store_true", help="Solo avisos sin postulación")
+    p.add_argument("--since", help="Solo avisos vistos por primera vez desde esta fecha (YYYY-MM-DD)")
+    p.add_argument("--all", action="store_true", help="Incluir avisos cerrados")
     p.set_defaults(func=cmd_report)
+
+    p = sub.add_parser("digest", help="Resumen del ciclo: avisos nuevos y estado de las postulaciones")
+    p.add_argument("--since", help="Fecha del ciclo anterior (YYYY-MM-DD)")
+    p.set_defaults(func=cmd_digest)
 
     p = sub.add_parser("schema", help="Esquema JSON de un análisis o de un CV")
     p.add_argument("which", nargs="?", choices=["analysis", "cv", "answers"], default="analysis")
@@ -403,6 +460,12 @@ def main(argv: list[str] | None = None) -> None:
     c = cv_sub.add_parser("sources", help="Cada texto del CV junto a sus fuentes")
     c.add_argument("doc")
     c.set_defaults(func=cmd_cv_sources)
+
+    p = sub.add_parser("salary", help="Recomendación salarial para un aviso analizado")
+    p.add_argument("job_id")
+    p.add_argument("--market", choices=["local", "foreign", "unclear"],
+                   help="Forzar quién paga si el análisis no lo sabe")
+    p.set_defaults(func=cmd_salary)
 
     p = sub.add_parser("app", help="Carpetas de postulación")
     app_sub = p.add_subparsers(dest="app_cmd", required=True)
