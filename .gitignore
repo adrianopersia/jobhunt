@@ -1,0 +1,17 @@
+# Datos personales y todo lo que generan los agentes: nunca se versionan.
+/private/
+.leak-denylist
+
+# Documentos sueltos (CVs, postulaciones). Excepciones explícitas, si hacen falta, abajo.
+*.pdf
+*.docx
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Claude Code: la configuración local puede tener rutas personales.
+.claude/settings.local.json
+*.egg-info/
