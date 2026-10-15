@@ -1,0 +1,122 @@
+# Perfil de ejemplo con una candidata y empresas ficticias.
+# Copiar a private/profile/profile.yaml y reemplazar con datos propios verificables.
+#
+# use: cv         → puede ir en el CV
+# use: interview  → cierto, pero necesita contexto: solo para respuestas y entrevistas
+# use: pending    → sin confirmar: no se usa en ningún lado todavía
+
+schema_version: 1
+experience_years_for_matching: 4
+
+person:
+  name: Ana Ejemplo
+  file_stem: Ana-Ejemplo
+  email: ana@example.com
+  phone: "+54 9 341 000-0000"
+  location:
+    en: Rosario, Argentina (open to remote)
+    es: Rosario, Argentina (disponible para remoto)
+  links:
+    - label: github.com/ana-ejemplo
+      url: https://github.com/ana-ejemplo
+
+headlines:
+  fullstack:
+    en: Full-Stack Developer | TypeScript, Node.js & React
+    es: Desarrolladora Full-Stack | TypeScript, Node.js y React
+
+facts:
+  - id: f-years
+    en: 4+ years of professional software development experience
+    es: más de 4 años de experiencia profesional en desarrollo de software
+    use: cv
+    requires_companies: [Comercio Austral]
+  - id: f-acme
+    en: Acme Logística, a freight-tracking SaaS
+    es: Acme Logística, un SaaS de seguimiento de cargas
+    use: cv
+
+experience:
+  - id: exp-acme
+    company: Acme Logística
+    descriptor: {en: freight-tracking SaaS, es: SaaS de seguimiento de cargas}
+    title: {en: Software Developer, es: Desarrolladora de Software}
+    start: 2023-03
+    end: null
+    achievements:
+      - id: acme-tracking
+        en: Built the real-time shipment map over WebSockets, from the Node.js gateway to the React client (3 PRs, 14 test files).
+        es: Desarrollé el mapa de envíos en tiempo real sobre WebSockets, desde el gateway en Node.js hasta el cliente en React (3 PRs, 14 archivos de test).
+        tags: [websockets, nodejs, react, fullstack]
+        evidence: PRs #41, #47, #52
+        confidence: high
+        use: cv
+      - id: acme-agents
+        en: Set up the coding-agent rules and skills used across the team's 3 repositories.
+        es: Armé las reglas y skills de agentes de código que usa el equipo en sus 3 repositorios.
+        tags: [ai, agents]
+        evidence: historial de .claude/ en los 3 repos
+        confidence: high
+        use: cv
+      - id: acme-benchmark
+        en: Drafted a benchmark to compare coding models; only a pilot was run.
+        es: Armé el borrador de un benchmark para comparar modelos de código; solo se corrió un piloto.
+        tags: [ai, evals]
+        confidence: medium
+        use: interview
+
+  - id: exp-austral
+    company: Comercio Austral
+    descriptor: null
+    title: {en: Web Developer, es: Desarrolladora Web}
+    start: 2022-01
+    end: 2023-02
+    achievements:
+      - id: aus-shop
+        en: Built and maintained the company's online store.
+        es: Desarrollé y mantuve la tienda online de la empresa.
+        tags: [web, ecommerce]
+        confidence: high
+        use: cv
+
+projects:
+  - id: prj-recetas
+    title: {en: Recipe planner, es: Planificador de recetas}
+    en: "(Next.js, PostgreSQL): weekly meal planning with a shopping list."
+    es: "(Next.js, PostgreSQL): planificación semanal de comidas con lista de compras."
+    links: [recetas.example.com]
+    use: cv
+
+# Listas en formato de bloque: en una lista en línea, las comas dentro de un paréntesis
+# parten el item ("Claude Code (skills, subagents)" se vuelve dos items rotos).
+skills:
+  backend:
+    - Node.js
+    - TypeScript
+    - PostgreSQL
+    - REST APIs
+    - WebSockets (Socket.IO)
+  frontend: [React, Next.js, HTML, CSS]
+  ai_engineering:
+    - "Claude Code (skills, subagents)"
+    - Cursor
+
+education:
+  - degree: {en: Bachelor's Degree in Computer Science, es: Licenciatura en Ciencias de la Computación}
+    school: Universidad Ficticia, Rosario, Argentina
+    years: 2018 - 2022
+    status: {en: graduated, es: graduada}
+
+languages:
+  en: Spanish (native) | English (C1)
+  es: Español (nativo) | Inglés (C1)
+
+excluded_experience:
+  - company: Pasantía Breve S.A.
+    reason: Pasantía de 3 meses sin aportes relevantes.
+
+not_claimable:
+  - claim: Experta en Kubernetes
+    reason: Solo lo usó en un curso.
+
+pending_confirmation: []

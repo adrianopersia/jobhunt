@@ -1,0 +1,28 @@
+# Copiar a private/preferences.yaml y ajustar. Todas las regex son case-insensitive.
+
+# Híbrido o presencial solo si la ubicación menciona alguna de estas palabras.
+home_city_keywords: [rosario]
+remote_ok: true
+
+# Piso para filtrar (no es la respuesta a "expectativa salarial").
+salary_floor_usd_month: 1500
+# Unidades de moneda local por 1 USD. Sin tipo de cambio, el piso no se aplica a esa moneda.
+fx_to_usd: {}
+
+max_years_required: 5
+excluded_role_families: [ml_research, ml_engineer, data, non_engineering]
+apply_threshold: 70
+maybe_threshold: 50
+
+title_include:
+  - '\b(ai|ia|llm|genai)\b'
+  - 'agent'
+  - 'automat'
+  - 'full[- ]?stack'
+  - 'back[- ]?end'
+  - 'software (engineer|developer)'
+  - '\bdeveloper\b'
+title_exclude:
+  - '\b(staff|principal|head of|director)\b'
+  - 'manager'
+  - 'secur'

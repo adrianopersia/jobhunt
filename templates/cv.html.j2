@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="{{ doc.lang }}">
+<head>
+<meta charset="utf-8">
+<title>{{ doc.name }}</title>
+<style>
+  @page { size: Letter; margin: 0.45in 0.55in; }
+  :root { --ink: #1f1f1f; --accent: #1f3a5f; --muted: #555; --link: #1f5fa8; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; color: var(--ink);
+    font-family: Carlito, Calibri, "Helvetica Neue", Arial, sans-serif;
+    font-size: 9.6pt; line-height: 1.28;
+  }
+  h1 { margin: 0; color: var(--accent); font-size: 19pt; line-height: 1.1; }
+  .headline { margin: 2pt 0 3pt; font-weight: bold; font-size: 10.6pt; }
+  .contact { color: var(--muted); font-size: 8.6pt; }
+  a { color: var(--link); text-decoration: none; }
+  h2 {
+    margin: 8pt 0 3pt; padding-bottom: 1.5pt;
+    color: var(--accent); font-size: 10.4pt; text-transform: uppercase;
+    border-bottom: 0.9pt solid var(--accent);
+  }
+  p { margin: 0; }
+  ul { margin: 1pt 0 0; padding-left: 12pt; }
+  li { margin: 0 0 1.4pt; }
+  .role { margin-top: 3pt; }
+  .role-head b { font-weight: bold; }
+</style>
+</head>
+<body>
+  <h1>{{ doc.name }}</h1>
+  <div class="headline">{{ doc.headline }}</div>
+  <div class="contact">
+    {{ doc.contact | join(" | ") }}{% for link in doc.links %} | <a href="{{ link.url }}">{{ link.label }}</a>{% endfor %}
+  </div>
+
+  <h2>{{ labels.summary }}</h2>
+  <p>{{ doc.summary.text }}</p>
+
+  <h2>{{ labels.skills }}</h2>
+  <ul>
+    {% for line in doc.skills %}<li><b>{{ line.label }}:</b> {{ line.items | join(", ") }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>{{ labels.experience }}</h2>
+  {% for role in doc.experience %}
+  <div class="role">
+    <div class="role-head"><b>{{ role.company }}</b>{% if role.descriptor %} ({{ role.descriptor }}){% endif %} | {{ role.title }} | {{ role | period }}</div>
+    <ul>
+      {% for bullet in role.bullets %}<li>{{ bullet.text }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+
+  {% if doc.projects %}
+  <h2>{{ labels.projects }}</h2>
+  <ul>
+    {% for project in doc.projects %}<li><b>{{ project.title }}</b> {{ project.text }}{% for url in project.links %}{% if loop.first %} {% else %}, {% endif %}<a href="https://{{ url }}">{{ url }}</a>{% endfor %}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <h2>{{ labels.education }}</h2>
+  {% for edu in doc.education %}
+  <p><b>{{ edu.degree }}</b> | {{ edu.school }} | {{ edu.years }}{% if edu.status %}, {{ edu.status }}{% endif %}</p>
+  {% endfor %}
+
+  <h2>{{ labels.languages }}</h2>
+  <p>{{ doc.languages }}</p>
+</body>
+</html>
