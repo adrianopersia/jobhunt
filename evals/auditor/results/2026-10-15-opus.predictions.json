@@ -1,0 +1,182 @@
+[
+ {
+  "id": "c01",
+  "verdict": "fiel",
+  "reason": "\"end to end\" solo parafrasea \"from the Node.js gateway to the React client\"; mismo alcance y números."
+ },
+ {
+  "id": "c02",
+  "verdict": "exagera",
+  "reason": "\"Designed and led\" donde la fuente dice \"Built\"."
+ },
+ {
+  "id": "c03",
+  "verdict": "agrega",
+  "reason": "\"Redis pub/sub\" no aparece en la fuente."
+ },
+ {
+  "id": "c04",
+  "verdict": "fiel",
+  "reason": "Traducción fiel al español, mismo alcance (equipo, 3 repositorios)."
+ },
+ {
+  "id": "c05",
+  "verdict": "exagera",
+  "reason": "\"company-wide across all 3 product repositories\" sube el alcance de \"the team's 3 repositories\"."
+ },
+ {
+  "id": "c06",
+  "verdict": "agrega",
+  "reason": "El impacto \"cutting review back-and-forth on pull requests\" no está en la fuente."
+ },
+ {
+  "id": "c07",
+  "verdict": "fiel",
+  "reason": "Reformula sin cambiar alcance: servicio de billing, 40 endpoints, contract tests."
+ },
+ {
+  "id": "c08",
+  "verdict": "exagera",
+  "reason": "\"the platform's backend\" sube el alcance de \"the billing service\"."
+ },
+ {
+  "id": "c09",
+  "verdict": "agrega",
+  "reason": "\"with zero downtime\" no está en la fuente."
+ },
+ {
+  "id": "c10",
+  "verdict": "fiel",
+  "reason": "\"Participated\" equivale a \"Took part\"; mantiene que el pipeline es del platform team."
+ },
+ {
+  "id": "c11",
+  "verdict": "exagera",
+  "reason": "\"Set up the pipeline\" donde la fuente dice que participó y que lo mantiene el platform team."
+ },
+ {
+  "id": "c12",
+  "verdict": "exagera",
+  "reason": "\"Led a 5-person squad\" donde la fuente dice que estaba en el squad y era dueño solo del frontend."
+ },
+ {
+  "id": "c13",
+  "verdict": "fiel",
+  "reason": "Reordena la fuente: dueño del frontend, entregado por un squad de 5."
+ },
+ {
+  "id": "c14",
+  "verdict": "agrega",
+  "reason": "\"mentoring the squad's junior developer\" no está en la fuente."
+ },
+ {
+  "id": "c15",
+  "verdict": "fiel",
+  "reason": "Combina las dos fuentes sin cambiar números ni alcance."
+ },
+ {
+  "id": "c16",
+  "verdict": "exagera",
+  "reason": "\"most of the unit tests\" es falso: 22 de 60 (37%) no es la mayoría."
+ },
+ {
+  "id": "c17",
+  "verdict": "agrega",
+  "reason": "\"added them as a required check in CI\" no está en ninguna fuente."
+ },
+ {
+  "id": "c18",
+  "verdict": "fiel",
+  "reason": "Traducción fiel: diagnóstico, causa, match exacto con validación de rango, sin cambiar el esquema."
+ },
+ {
+  "id": "c19",
+  "verdict": "exagera",
+  "reason": "\"Redesigned the search engine's handling of numeric fields\" sube el alcance de un fix puntual a la búsqueda por CUIT."
+ },
+ {
+  "id": "c20",
+  "verdict": "agrega",
+  "reason": "\"and partial matching\" no está en la fuente, que solo dice exact matching."
+ },
+ {
+  "id": "c21",
+  "verdict": "fiel",
+  "reason": "Combina las tres fuentes sin agregar nada sustancial."
+ },
+ {
+  "id": "c22",
+  "verdict": "exagera",
+  "reason": "\"Senior developer\" sube el nivel; la fuente solo dice 4+ años de experiencia."
+ },
+ {
+  "id": "c23",
+  "verdict": "agrega",
+  "reason": "\"ships LLM features to production\" no está en ninguna fuente (además pone los 4+ años en Acme, cosa que la fuente no dice)."
+ },
+ {
+  "id": "c24",
+  "verdict": "fiel",
+  "reason": "Traducción que dice lo mismo o menos (omite \"not implemented\", pero no afirma que se haya implementado)."
+ },
+ {
+  "id": "c25",
+  "verdict": "exagera",
+  "reason": "\"Built\" donde la fuente dice \"Proposed\" y aclara que no se implementó."
+ },
+ {
+  "id": "c26",
+  "verdict": "agrega",
+  "reason": "\"approved by leadership\" no está en la fuente."
+ },
+ {
+  "id": "c27",
+  "verdict": "fiel",
+  "reason": "\"Primary\" equivale a \"Main\"; mismos datos."
+ },
+ {
+  "id": "c28",
+  "verdict": "exagera",
+  "reason": "\"Sole developer\" donde la fuente dice \"Main developer\" (con el 70% de los commits, no el 100%)."
+ },
+ {
+  "id": "c29",
+  "verdict": "agrega",
+  "reason": "\"used daily by the operations team\" no está en la fuente."
+ },
+ {
+  "id": "c30",
+  "verdict": "fiel",
+  "reason": "Paráfrasis directa, mismo alcance."
+ },
+ {
+  "id": "c31",
+  "verdict": "exagera",
+  "reason": "\"Secured all client–API traffic\" sube el alcance de \"in the mobile app\"."
+ },
+ {
+  "id": "c32",
+  "verdict": "agrega",
+  "reason": "\"following a security audit\" no está en la fuente."
+ },
+ {
+  "id": "c33",
+  "verdict": "fiel",
+  "reason": "Reordena la fuente sin cambiar el contenido."
+ },
+ {
+  "id": "c34",
+  "verdict": "agrega",
+  "reason": "\"React\" no figura en la fuente."
+ },
+ {
+  "id": "c35",
+  "verdict": "exagera",
+  "reason": "\"e-commerce platforms\" sube el alcance de \"websites\"."
+ },
+ {
+  "id": "c36",
+  "verdict": "fiel",
+  "reason": "Reordena la fuente sin cambiar el contenido."
+ }
+]
