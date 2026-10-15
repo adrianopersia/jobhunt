@@ -212,8 +212,38 @@ def parse_html_form(html: str, url: str, system: str) -> ApplicationForm:
 
 # ---------- entrada ----------
 
-def fetch_form(client: PoliteClient, apply_url: str) -> ApplicationForm:
+# Bolsas que muestran el aviso y mandan a postularse a otro lado.
+AGGREGATORS = ("weworkremotely.com", "himalayas.app", "jobicy.com", "startupsargentina.com")
+_APPLY_TEXT = re.compile(r"apply|postul|aplicar", re.IGNORECASE)
+
+
+def outbound_apply_link(html: str, host: str) -> str | None:
+    """El link de "Apply" que sale del agregador hacia el sitio de la empresa."""
+    soup = BeautifulSoup(html, "html.parser")
+    for a in soup.find_all("a", href=True):
+        href = a["href"]
+        target = urlparse(href).netloc
+        if href.startswith("http") and target and host not in target and _APPLY_TEXT.search(
+                a.get_text(" ", strip=True) + " " + " ".join(a.get("class", []))):
+            return href
+    return None
+
+
+def fetch_form(client: PoliteClient, apply_url: str, _depth: int = 0) -> ApplicationForm:
     url = clean_url(apply_url)
+    host = urlparse(url).netloc
+    if host.endswith("getonbrd.com"):
+        return ApplicationForm(url=url, system="getonbrd", extractable=False, notes=[
+            "La postulación se hace dentro de Get on Board, con tu cuenta: completás el perfil "
+            "de Get on Board y las preguntas del aviso ahí."])
+    if any(host.endswith(a) for a in AGGREGATORS) and _depth == 0:
+        target = outbound_apply_link(client.get_text(url), host)
+        if target:
+            form = fetch_form(client, target, _depth=1)
+            form.notes.insert(0, f"El agregador manda a postularse acá: {clean_url(target)}")
+            return form
+        return ApplicationForm(url=url, system=host, extractable=False, notes=[
+            "No encontré el link de postulación en la página del agregador; abrilo y seguí su botón Apply."])
     ats = detect_ats(url)
     host = urlparse(url).netloc
     if ats == "greenhouse":

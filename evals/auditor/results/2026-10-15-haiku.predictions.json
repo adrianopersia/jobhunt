@@ -1,0 +1,182 @@
+[
+ {
+  "id": "c01",
+  "verdict": "fiel",
+  "reason": "Misma afirmación que la fuente; 'end to end' es paráfrasis de 'desde el gateway hasta el cliente'."
+ },
+ {
+  "id": "c02",
+  "verdict": "exagera",
+  "reason": "Sube el verbo: la fuente dice 'Built' y el CV pasa a 'Designed and led' (diseñé/lideré)."
+ },
+ {
+  "id": "c03",
+  "verdict": "agrega",
+  "reason": "Agrega Redis pub/sub, que no aparece en la fuente."
+ },
+ {
+  "id": "c04",
+  "verdict": "fiel",
+  "reason": "Traducción fiel de la fuente: reglas y skills usadas en los 3 repositorios del equipo."
+ },
+ {
+  "id": "c05",
+  "verdict": "exagera",
+  "reason": "Sube el alcance: de 'the team's 3 repositories' a 'company-wide' en 'product repositories'."
+ },
+ {
+  "id": "c06",
+  "verdict": "agrega",
+  "reason": "Agrega un resultado (menos idas y vueltas en PRs) que no está en la fuente."
+ },
+ {
+  "id": "c07",
+  "verdict": "fiel",
+  "reason": "Dice lo mismo: 'each one' de la fuente equivale a 'its 40 endpoints'."
+ },
+ {
+  "id": "c08",
+  "verdict": "exagera",
+  "reason": "Sube el alcance: de 'billing service' a 'the platform's backend'."
+ },
+ {
+  "id": "c09",
+  "verdict": "agrega",
+  "reason": "Agrega 'zero downtime', dato que no está en la fuente."
+ },
+ {
+  "id": "c10",
+  "verdict": "fiel",
+  "reason": "Paráfrasis fiel de 'took part in', con 'run' por 'maintained'."
+ },
+ {
+  "id": "c11",
+  "verdict": "exagera",
+  "reason": "Sube el rol: la fuente dice 'took part in the move' y el CV pasa a 'Set up the pipeline' (participé a diseñé)."
+ },
+ {
+  "id": "c12",
+  "verdict": "exagera",
+  "reason": "Sube el rol: 'Led' no aparece; la fuente solo dice que fue en un squad de 5 y que owned the frontend."
+ },
+ {
+  "id": "c13",
+  "verdict": "fiel",
+  "reason": "Reordenamiento fiel: owned the frontend y shipped by a 5-person squad."
+ },
+ {
+  "id": "c14",
+  "verdict": "agrega",
+  "reason": "Agrega 'mentoring the squad's junior developer', que no está en la fuente."
+ },
+ {
+  "id": "c15",
+  "verdict": "fiel",
+  "reason": "Dice lo mismo: 22 de 60 archivos y 6 flujos de Maestro, sin escalar."
+ },
+ {
+  "id": "c16",
+  "verdict": "exagera",
+  "reason": "Sube el alcance: '22 of 60 files' pasa a 'most', que no describe 22 de 60."
+ },
+ {
+  "id": "c17",
+  "verdict": "agrega",
+  "reason": "Agrega 'required check in CI', que no está en la fuente."
+ },
+ {
+  "id": "c18",
+  "verdict": "fiel",
+  "reason": "Fiel: CUIT es el tax ID argentino; el resto de la fuente se mantiene sin cambios."
+ },
+ {
+  "id": "c19",
+  "verdict": "exagera",
+  "reason": "Sube el alcance: un fix puntual pasa a 'Redesigned the search engine's handling of numeric fields'."
+ },
+ {
+  "id": "c20",
+  "verdict": "agrega",
+  "reason": "Agrega 'partial matching', que la fuente no menciona (solo exact matching)."
+ },
+ {
+  "id": "c21",
+  "verdict": "fiel",
+  "reason": "Fiel: 'works in English' en presente respalda 'currently at' Acme Logística; sin escalar años ni cargo."
+ },
+ {
+  "id": "c22",
+  "verdict": "agrega",
+  "reason": "Agrega el título 'Senior', que no aparece en ninguna fuente."
+ },
+ {
+  "id": "c23",
+  "verdict": "agrega",
+  "reason": "Agrega 'ships LLM features to production', que no está en la fuente."
+ },
+ {
+  "id": "c24",
+  "verdict": "fiel",
+  "reason": "Dice menos: omite 'not implemented' pero no afirma nada que la fuente no diga."
+ },
+ {
+  "id": "c25",
+  "verdict": "exagera",
+  "reason": "Sube la acción: 'Built' donde la fuente dice propuesta y 'not implemented'."
+ },
+ {
+  "id": "c26",
+  "verdict": "agrega",
+  "reason": "Agrega 'approved by leadership', que no está en la fuente."
+ },
+ {
+  "id": "c27",
+  "verdict": "fiel",
+  "reason": "Fiel: 'Primary developer' es sinónimo de 'Main developer', con el mismo 70% de commits."
+ },
+ {
+  "id": "c28",
+  "verdict": "exagera",
+  "reason": "Sube el alcance: 'Sole developer' donde la fuente dice 'Main developer' con 70% de commits."
+ },
+ {
+  "id": "c29",
+  "verdict": "agrega",
+  "reason": "Agrega 'used daily by the operations team', que no está en la fuente."
+ },
+ {
+  "id": "c30",
+  "verdict": "fiel",
+  "reason": "Dice lo mismo: HMAC-SHA256 por interceptor HTTP, con tests dedicados."
+ },
+ {
+  "id": "c31",
+  "verdict": "exagera",
+  "reason": "Sube el alcance: de request signing en la app mobile a 'all client–API traffic'."
+ },
+ {
+  "id": "c32",
+  "verdict": "agrega",
+  "reason": "Agrega 'following a security audit', que no aparece en la fuente."
+ },
+ {
+  "id": "c33",
+  "verdict": "fiel",
+  "reason": "Fiel: mismo stack y WordPress; solo reordenado el 'on WordPress'."
+ },
+ {
+  "id": "c34",
+  "verdict": "agrega",
+  "reason": "Agrega React al stack, que no está en la fuente."
+ },
+ {
+  "id": "c35",
+  "verdict": "exagera",
+  "reason": "Sube el alcance: de 'websites' a 'e-commerce platforms'."
+ },
+ {
+  "id": "c36",
+  "verdict": "fiel",
+  "reason": "Dice lo mismo: paráfrasis de la respuesta idéntica y de los dos vectores de enumeración."
+ }
+]

@@ -68,7 +68,12 @@ def profile_text(profile: dict) -> str:
 
 def posting_terms(stack: list[str], description: str, profile: dict) -> list[str]:
     """El stack que extrajo el scout, más las skills del perfil que el aviso nombra."""
-    terms = {t.strip(): None for t in stack if t.strip()}
+    # "JavaScript/TypeScript" son dos términos, salvo nombres que llevan barra ("CI/CD", "Bloc/Cubit").
+    split = []
+    for term in stack:
+        parts = [p.strip() for p in term.split("/")] if "/" in term and term.lower() not in ALIASES else [term]
+        split += parts if all(len(p) > 2 for p in parts) else [term]
+    terms = {t.strip(): None for t in split if t.strip()}
     for items in profile.get("skills", {}).values():
         for skill in items:
             base = skill.split(" (")[0]

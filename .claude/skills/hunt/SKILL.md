@@ -20,7 +20,9 @@ anteriores.
 
 ## 1. Avisos nuevos
 
-Seguí `.claude/skills/scout/SKILL.md` (bajar, analizar en paralelo y ranking).
+Si el usuario pasó links de avisos que encontró por su cuenta (LinkedIn, referidos), sumalos
+primero con `.venv/bin/jobhunt add <url> ...`. Después seguí `.claude/skills/scout/SKILL.md`
+(bajar de todas las fuentes, analizar en paralelo y ranking).
 
 ## 2. Selección
 

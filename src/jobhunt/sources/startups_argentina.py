@@ -18,6 +18,7 @@ from bs4 import BeautifulSoup
 
 from jobhunt.http import PoliteClient
 from jobhunt.models import JobDetail, JobStub
+from jobhunt.sources.base import FetchContext, Listing
 
 SOURCE = "startups_argentina"
 BASE = "https://www.startupsargentina.com"
@@ -101,6 +102,12 @@ def iter_listing(client: PoliteClient, max_pages: int | None = None) -> Iterator
         stubs, total = parse_listing(html)
         yield from stubs
         page += 1
+
+
+def iter_jobs(client: PoliteClient, ctx: FetchContext) -> Iterator[Listing]:
+    ctx.complete = ctx.max_pages is None
+    for stub in iter_listing(client, max_pages=ctx.max_pages):
+        yield Listing(stub)
 
 
 def fetch_detail(client: PoliteClient, stub: JobStub) -> JobDetail:

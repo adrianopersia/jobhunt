@@ -1,7 +1,7 @@
 import pytest
 
 from jobhunt.models import JobAnalysis, Preferences
-from jobhunt.policy import decide, detect_ats, listing_filter_reason, monthly_usd
+from jobhunt.policy import decide, detect_ats, listing_filter_reason, monthly_usd, too_old
 
 
 @pytest.fixture
@@ -95,3 +95,12 @@ def test_salario_sin_tipo_de_cambio_no_descarta_pero_avisa(prefs):
 def test_esquema_rechaza_campos_inventados():
     with pytest.raises(ValueError):
         analysis(score_extra=1)
+
+
+def test_avisos_viejos(prefs):
+    from datetime import UTC, datetime
+    today = datetime(2026, 10, 15, tzinfo=UTC)
+    assert too_old("2024-05-01T00:00:00+00:00", prefs, today)
+    assert not too_old("2026-10-01T00:00:00Z", prefs, today)
+    assert not too_old(None, prefs, today)
+    assert not too_old("2026-09-01", prefs, today)  # sin zona horaria, 44 días

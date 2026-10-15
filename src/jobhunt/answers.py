@@ -94,6 +94,7 @@ def check_answers(form: ApplicationForm, sheet: AnswerSheet, profile: dict) -> l
             text = " ".join(values)
             allowed = normalize_numbers(idx.source_text(answer.source_ids))
             allowed |= normalize_numbers(" ".join(str(v) for v in person.values() if isinstance(v, str)))
+            allowed |= normalize_numbers(" ".join((profile.get("languages") or {}).values()))
             extra = normalize_numbers(text) - allowed
             if field.type in ("text", "textarea") and extra:
                 errors.append(f"{where}: números sin respaldo en las fuentes citadas: {sorted(extra)}")

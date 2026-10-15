@@ -8,6 +8,7 @@ PROFILE = {
         {"id": "acme-x", "en": "Built 3 services in Node.js.", "es": "Construí 3 servicios en Node.js.", "use": "cv"},
     ]}],
     "skills": {"backend": ["Node.js", "PostgreSQL"]},
+    "languages": {"en": "Spanish (native) | English (B2)", "es": "Español (nativo) | Inglés (B2)"},
 }
 
 FORM = ApplicationForm(url="u", system="x", extractable=True, fields=[
@@ -75,3 +76,9 @@ def test_numero_de_salario_no_lo_decide_el_agente():
 def test_email_ajeno():
     errs = check_answers(FORM, sheet(email={"action": "answer", "value": "otra@example.com"}), PROFILE)
     assert any("email" in e for e in errs)
+
+
+def test_nivel_de_idioma_del_perfil_no_es_numero_inventado():
+    errs = check_answers(FORM, sheet(about={"action": "answer", "value": "My English level is B2.",
+                                            "source_ids": ["f-years"]}), PROFILE)
+    assert errs == []

@@ -1,0 +1,11 @@
+# Boards públicos de empresas (Greenhouse, Lever, Ashby) que contratan en tu región.
+# Copiar a private/boards.yaml. El slug es el que aparece en la URL del board.
+- name: Acme Robotics
+  ats: greenhouse        # boards-api.greenhouse.io/v1/boards/<slug>/jobs
+  slug: acmerobotics
+- name: Ejemplo AI
+  ats: lever             # api.lever.co/v0/postings/<slug>
+  slug: ejemploai
+- name: Demo Labs
+  ats: ashby             # api.ashbyhq.com/posting-api/job-board/<slug>
+  slug: demolabs

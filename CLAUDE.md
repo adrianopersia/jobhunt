@@ -8,7 +8,9 @@ postula, completa formularios en el sitio real ni manda mensajes en nombre del c
 ## Cómo se usa
 
 `/hunt` corre un ciclo completo desde una sesión nueva. `/scout`, `/tailor` y `/review` corren
-una etapa sola. El estado del ciclo anterior está en `private/runs/ciclo-*.md`.
+una etapa sola. El estado del ciclo anterior está en `private/runs/ciclo-*.md`. Las fuentes
+están en `src/jobhunt/sources/`; las empresas de los boards, en `private/boards.yaml`. Los avisos
+que el candidato encuentre por su cuenta entran con `jobhunt add <url>`.
 
 ## Datos privados — regla dura
 

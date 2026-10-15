@@ -1,0 +1,182 @@
+[
+ {
+  "id": "c01",
+  "verdict": "fiel",
+  "reason": "'End to end' solo reformula 'del gateway Node.js al cliente React'; mismo alcance."
+ },
+ {
+  "id": "c02",
+  "verdict": "exagera",
+  "reason": "La fuente dice 'Built'; 'Designed and led' sube el alcance."
+ },
+ {
+  "id": "c03",
+  "verdict": "agrega",
+  "reason": "Redis pub/sub no aparece en ninguna fuente."
+ },
+ {
+  "id": "c04",
+  "verdict": "fiel",
+  "reason": "Traducción fiel al español: reglas y skills, 3 repositorios del equipo."
+ },
+ {
+  "id": "c05",
+  "verdict": "exagera",
+  "reason": "La fuente dice repos del equipo; 'company-wide' y 'all product repositories' amplían el alcance."
+ },
+ {
+  "id": "c06",
+  "verdict": "agrega",
+  "reason": "El resultado 'cutting review back-and-forth' no está en la fuente."
+ },
+ {
+  "id": "c07",
+  "verdict": "fiel",
+  "reason": "Mismo servicio, 40 endpoints y contract tests; solo reordena."
+ },
+ {
+  "id": "c08",
+  "verdict": "exagera",
+  "reason": "La fuente migra el servicio de billing; 'the platform's backend' amplía el alcance."
+ },
+ {
+  "id": "c09",
+  "verdict": "agrega",
+  "reason": "'Zero downtime' no figura en la fuente."
+ },
+ {
+  "id": "c10",
+  "verdict": "fiel",
+  "reason": "Mantiene 'participé' y que el pipeline lo corre el equipo de plataforma."
+ },
+ {
+  "id": "c11",
+  "verdict": "exagera",
+  "reason": "La fuente dice 'took part' y que lo mantiene plataforma; 'Set up' lo presenta como autor."
+ },
+ {
+  "id": "c12",
+  "verdict": "exagera",
+  "reason": "La fuente dice que integró el squad y era dueño del frontend; 'Led a squad' sube a liderazgo."
+ },
+ {
+  "id": "c13",
+  "verdict": "fiel",
+  "reason": "Dueño del frontend y squad de 5 personas, igual que la fuente."
+ },
+ {
+  "id": "c14",
+  "verdict": "agrega",
+  "reason": "El mentoring del junior no está en la fuente."
+ },
+ {
+  "id": "c15",
+  "verdict": "fiel",
+  "reason": "22 de 60 tests unitarios y 6 flujos Maestro de login y checkout; coincide con ambas fuentes."
+ },
+ {
+  "id": "c16",
+  "verdict": "exagera",
+  "reason": "'Most' no se sostiene: 22 de 60 es una minoría."
+ },
+ {
+  "id": "c17",
+  "verdict": "agrega",
+  "reason": "'Required check in CI' no aparece en ninguna fuente."
+ },
+ {
+  "id": "c18",
+  "verdict": "fiel",
+  "reason": "Traducción fiel: diagnóstico, match exacto con validación de rango, sin cambiar el esquema."
+ },
+ {
+  "id": "c19",
+  "verdict": "exagera",
+  "reason": "'Redesigned the search engine's handling of numeric fields' infla un diagnóstico más un match exacto con rango, sin cambiar el esquema."
+ },
+ {
+  "id": "c20",
+  "verdict": "agrega",
+  "reason": "'Partial matching' no está en la fuente, que solo menciona match exacto."
+ },
+ {
+  "id": "c21",
+  "verdict": "fiel",
+  "reason": "4+ años, Acme Logística e inglés con clientes internacionales, todo en las fuentes."
+ },
+ {
+  "id": "c22",
+  "verdict": "agrega",
+  "reason": "'Senior' no figura en ninguna fuente, que solo dicen 4+ años."
+ },
+ {
+  "id": "c23",
+  "verdict": "agrega",
+  "reason": "'Ships LLM features to production' no está en las fuentes, que solo dicen que usa agentes de código con IA."
+ },
+ {
+  "id": "c24",
+  "verdict": "fiel",
+  "reason": "Dice 'propuse' y omite 'no implementado'; no sube el alcance."
+ },
+ {
+  "id": "c25",
+  "verdict": "exagera",
+  "reason": "La fuente dice 'propuesto, no implementado'; 'Built' lo presenta como construido."
+ },
+ {
+  "id": "c26",
+  "verdict": "agrega",
+  "reason": "'Approved by leadership' no figura en la fuente."
+ },
+ {
+  "id": "c27",
+  "verdict": "fiel",
+  "reason": "'Primary developer' equivale a 'main developer'; 70% de commits, rediseño y route guards coinciden."
+ },
+ {
+  "id": "c28",
+  "verdict": "exagera",
+  "reason": "'Sole developer' sube 'main developer' con 70% de los commits."
+ },
+ {
+  "id": "c29",
+  "verdict": "agrega",
+  "reason": "'Used daily by the operations team' no está en la fuente."
+ },
+ {
+  "id": "c30",
+  "verdict": "fiel",
+  "reason": "Mismo contenido: firma HMAC-SHA256 en la app móvil, interceptor HTTP, tests dedicados."
+ },
+ {
+  "id": "c31",
+  "verdict": "exagera",
+  "reason": "'Secured all client-API traffic' amplía 'request signing en la app móvil' a todo el tráfico."
+ },
+ {
+  "id": "c32",
+  "verdict": "agrega",
+  "reason": "'Following a security audit' no figura en la fuente."
+ },
+ {
+  "id": "c33",
+  "verdict": "fiel",
+  "reason": "Reordena: sitios WordPress con HTML, CSS, JavaScript y PHP."
+ },
+ {
+  "id": "c34",
+  "verdict": "agrega",
+  "reason": "React no aparece en la fuente."
+ },
+ {
+  "id": "c35",
+  "verdict": "agrega",
+  "reason": "'E-commerce platforms' no está en la fuente, que solo dice 'websites'."
+ },
+ {
+  "id": "c36",
+  "verdict": "fiel",
+  "reason": "Misma afirmación: respuesta idéntica en login y recuperación, dos vectores de enumeración cerrados."
+ }
+]

@@ -28,3 +28,8 @@ def test_tres_grupos():
 def test_suma_skills_del_perfil_que_el_aviso_nombra():
     terms = posting_terms(["React"], "Buscamos alguien con PostgreSQL y React.", PROFILE)
     assert terms == ["React", "PostgreSQL"]
+
+
+def test_terminos_con_barra_se_separan_salvo_nombres_conocidos():
+    terms = posting_terms(["JavaScript/TypeScript", "CI/CD", "AWS/Azure/GCP"], "", PROFILE)
+    assert terms == ["JavaScript", "TypeScript", "CI/CD", "AWS", "Azure", "GCP"]

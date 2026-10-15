@@ -5,6 +5,7 @@
   pending    -> con detalle, esperando análisis del agente
   analyzed   -> con análisis y decisión
   gone       -> ya no aparece en el listado de la fuente (se cerró o se despublicó)
+  duplicate  -> el mismo aviso ya entró por otra fuente (misma empresa y título)
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from pathlib import Path
 
 from jobhunt.models import JobAnalysis, JobDetail, JobStub
 from jobhunt.policy import Decision, detect_ats
+from jobhunt.sources.base import norm_key
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
@@ -71,6 +73,14 @@ class Store:
         columns = {r["name"] for r in self.db.execute("PRAGMA table_info(jobs)")}
         if "description_source" not in columns:
             self.db.execute("ALTER TABLE jobs ADD COLUMN description_source TEXT")
+        if "norm_key" not in columns:
+            self.db.execute("ALTER TABLE jobs ADD COLUMN norm_key TEXT")
+        missing = self.db.execute("SELECT id, company, title FROM jobs WHERE norm_key IS NULL").fetchall()
+        for row in missing:
+            self.db.execute("UPDATE jobs SET norm_key = ? WHERE id = ?",
+                            (norm_key(row["company"], row["title"]), row["id"]))
+        if missing:
+            self.db.commit()
 
     def upsert_stub(self, stub: JobStub) -> bool:
         """Devuelve True si el aviso es nuevo."""
@@ -89,11 +99,19 @@ class Store:
             return False
         self.db.execute(
             "INSERT INTO jobs (id, source, external_id, url, title, company, location,"
-            " first_seen, last_seen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " first_seen, last_seen, norm_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (stub.id, stub.source, stub.external_id, stub.url, stub.title,
-             stub.company, stub.location, ts, ts),
+             stub.company, stub.location, ts, ts, norm_key(stub.company, stub.title)),
         )
         return True
+
+    def duplicate_of(self, job_id: str) -> str | None:
+        """Otro aviso vivo con la misma empresa y título, si lo hay."""
+        row = self.db.execute(
+            "SELECT o.id FROM jobs j JOIN jobs o ON o.norm_key = j.norm_key AND o.id != j.id"
+            " WHERE j.id = ? AND o.status IN ('listed', 'pending', 'analyzed') LIMIT 1", (job_id,)
+        ).fetchone()
+        return row["id"] if row else None
 
     def mark_gone(self, source: str, seen_ids: set[str]) -> list[str]:
         """Marca como cerrados los avisos de la fuente que no aparecieron en el listado completo."""
@@ -203,6 +221,12 @@ class Store:
             "SELECT p.*, j.title, j.company, j.status AS job_status, a.fit_score FROM applications p"
             " JOIN jobs j ON j.id = p.job_id LEFT JOIN analyses a ON a.job_id = p.job_id"
             " ORDER BY p.updated_at DESC"
+        ).fetchall()
+
+    def analyses_with_salary(self) -> list[sqlite3.Row]:
+        return self.db.execute(
+            "SELECT a.job_id, a.analysis, j.source FROM analyses a JOIN jobs j ON j.id = a.job_id"
+            " WHERE json_extract(a.analysis, '$.salary') IS NOT NULL"
         ).fetchall()
 
     def counts(self) -> dict[str, int]:
