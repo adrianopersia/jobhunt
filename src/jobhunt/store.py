@@ -1,0 +1,186 @@
+"""Persistencia en SQLite. Un aviso pasa por estos estados:
+
+  listed     -> visto en el listado, sin detalle
+  filtered   -> descartado por título (no se baja el detalle)
+  pending    -> con detalle, esperando análisis del agente
+  analyzed   -> con análisis y decisión
+"""
+
+from __future__ import annotations
+
+import json
+import sqlite3
+from datetime import UTC, datetime
+from pathlib import Path
+
+from jobhunt.models import JobAnalysis, JobDetail, JobStub
+from jobhunt.policy import Decision, detect_ats
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS jobs (
+  id TEXT PRIMARY KEY,
+  source TEXT NOT NULL,
+  external_id TEXT NOT NULL,
+  url TEXT NOT NULL,
+  title TEXT NOT NULL,
+  company TEXT NOT NULL,
+  location TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'listed',
+  first_seen TEXT NOT NULL,
+  last_seen TEXT NOT NULL,
+  description TEXT,
+  apply_url TEXT,
+  ats TEXT,
+  posted_at TEXT,
+  employment_type TEXT,
+  modality_raw TEXT,
+  location_raw TEXT,
+  location_requirements TEXT,
+  detail_fetched_at TEXT
+);
+CREATE TABLE IF NOT EXISTS applications (
+  job_id TEXT PRIMARY KEY REFERENCES jobs(id),
+  folder TEXT NOT NULL,
+  status TEXT NOT NULL,
+  note TEXT,
+  updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS analyses (
+  job_id TEXT PRIMARY KEY REFERENCES jobs(id),
+  analysis TEXT NOT NULL,
+  fit_score INTEGER NOT NULL,
+  decision TEXT NOT NULL,
+  decision_reasons TEXT NOT NULL,
+  rubric_version TEXT NOT NULL,
+  analyzed_at TEXT NOT NULL
+);
+"""
+
+
+def now() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds")
+
+
+class Store:
+    def __init__(self, path: Path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self.db = sqlite3.connect(path)
+        self.db.row_factory = sqlite3.Row
+        self.db.executescript(SCHEMA)
+        columns = {r["name"] for r in self.db.execute("PRAGMA table_info(jobs)")}
+        if "description_source" not in columns:
+            self.db.execute("ALTER TABLE jobs ADD COLUMN description_source TEXT")
+
+    def upsert_stub(self, stub: JobStub) -> bool:
+        """Devuelve True si el aviso es nuevo."""
+        ts = now()
+        cur = self.db.execute(
+            "UPDATE jobs SET last_seen = ?, title = ?, location = ? WHERE id = ?",
+            (ts, stub.title, stub.location, stub.id),
+        )
+        if cur.rowcount:
+            return False
+        self.db.execute(
+            "INSERT INTO jobs (id, source, external_id, url, title, company, location,"
+            " first_seen, last_seen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (stub.id, stub.source, stub.external_id, stub.url, stub.title,
+             stub.company, stub.location, ts, ts),
+        )
+        return True
+
+    def set_status(self, job_id: str, status: str) -> None:
+        self.db.execute("UPDATE jobs SET status = ? WHERE id = ?", (status, job_id))
+
+    def save_detail(self, job_id: str, detail: JobDetail) -> None:
+        self.db.execute(
+            "UPDATE jobs SET description = ?, apply_url = ?, ats = ?, posted_at = ?,"
+            " employment_type = ?, modality_raw = ?, location_raw = ?,"
+            " location_requirements = ?, detail_fetched_at = ?, status = 'pending',"
+            " description_source = CASE WHEN ? = '' THEN NULL ELSE 'site' END"
+            " WHERE id = ?",
+            (detail.description, detail.apply_url, detect_ats(detail.apply_url),
+             detail.posted_at, detail.employment_type, detail.modality_raw,
+             detail.location_raw, json.dumps(detail.location_requirements), now(),
+             detail.description, job_id),
+        )
+
+    def missing_description(self) -> list[sqlite3.Row]:
+        return self.db.execute(
+            "SELECT * FROM jobs WHERE status IN ('pending', 'analyzed')"
+            " AND COALESCE(description, '') = '' AND COALESCE(apply_url, '') != ''"
+            " AND COALESCE(description_source, '') != 'ats_failed'"
+        ).fetchall()
+
+    def save_ats_description(self, job_id: str, text: str) -> None:
+        """Con texto nuevo, el aviso vuelve a 'pending' para re-analizarlo."""
+        if text:
+            self.db.execute(
+                "UPDATE jobs SET description = ?, description_source = 'ats', status = 'pending'"
+                " WHERE id = ?", (text, job_id))
+            self.db.execute("DELETE FROM analyses WHERE job_id = ?", (job_id,))
+        else:
+            self.db.execute(
+                "UPDATE jobs SET description_source = 'ats_failed' WHERE id = ?", (job_id,))
+
+    def needs_detail(self, job_id: str) -> bool:
+        row = self.db.execute(
+            "SELECT detail_fetched_at FROM jobs WHERE id = ?", (job_id,)
+        ).fetchone()
+        return row is not None and row["detail_fetched_at"] is None
+
+    def get(self, job_id: str) -> sqlite3.Row | None:
+        return self.db.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+
+    def by_status(self, status: str, limit: int | None = None) -> list[sqlite3.Row]:
+        sql = "SELECT * FROM jobs WHERE status = ? ORDER BY posted_at DESC"
+        if limit:
+            sql += f" LIMIT {int(limit)}"
+        return self.db.execute(sql, (status,)).fetchall()
+
+    def save_analysis(
+        self, job_id: str, analysis: JobAnalysis, decision: Decision, rubric_version: str
+    ) -> None:
+        self.db.execute(
+            "INSERT OR REPLACE INTO analyses (job_id, analysis, fit_score, decision,"
+            " decision_reasons, rubric_version, analyzed_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (job_id, analysis.model_dump_json(), analysis.fit_score, decision.decision,
+             json.dumps(decision.reasons, ensure_ascii=False), rubric_version, now()),
+        )
+        self.set_status(job_id, "analyzed")
+
+    def ranked(self) -> list[sqlite3.Row]:
+        return self.db.execute(
+            "SELECT j.id, j.title, j.company, j.url, j.apply_url, j.ats, j.posted_at,"
+            " a.fit_score, a.decision, a.decision_reasons, a.analysis"
+            " FROM analyses a JOIN jobs j ON j.id = a.job_id"
+            " ORDER BY CASE a.decision WHEN 'apply' THEN 0 WHEN 'maybe' THEN 1 ELSE 2 END,"
+            " a.fit_score DESC"
+        ).fetchall()
+
+    def analysis(self, job_id: str) -> sqlite3.Row | None:
+        return self.db.execute("SELECT * FROM analyses WHERE job_id = ?", (job_id,)).fetchone()
+
+    def upsert_application(self, job_id: str, folder: str, status: str, note: str | None = None) -> None:
+        self.db.execute(
+            "INSERT INTO applications (job_id, folder, status, note, updated_at) VALUES (?, ?, ?, ?, ?)"
+            " ON CONFLICT(job_id) DO UPDATE SET status = excluded.status,"
+            " note = COALESCE(excluded.note, applications.note), updated_at = excluded.updated_at",
+            (job_id, folder, status, note, now()),
+        )
+
+    def application(self, job_id: str) -> sqlite3.Row | None:
+        return self.db.execute("SELECT * FROM applications WHERE job_id = ?", (job_id,)).fetchone()
+
+    def applications(self) -> list[sqlite3.Row]:
+        return self.db.execute(
+            "SELECT p.*, j.title, j.company, a.fit_score FROM applications p"
+            " JOIN jobs j ON j.id = p.job_id LEFT JOIN analyses a ON a.job_id = p.job_id"
+            " ORDER BY p.updated_at DESC"
+        ).fetchall()
+
+    def counts(self) -> dict[str, int]:
+        rows = self.db.execute("SELECT status, COUNT(*) n FROM jobs GROUP BY status")
+        return {r["status"]: r["n"] for r in rows}
+
+    def commit(self) -> None:
+        self.db.commit()
