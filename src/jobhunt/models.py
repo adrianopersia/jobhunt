@@ -89,6 +89,10 @@ class JobAnalysis(BaseModel):
     work_location: str = Field(description="Ciudad/país si es híbrido o presencial; vacío si es remoto")
     remote_accepts_argentina: Tri
     salary: Salary | None
+    employer_market: Literal["local", "foreign", "unclear"] = Field(
+        default="unclear",
+        description="Quién paga: empresa argentina (local) o del exterior (foreign)",
+    )
     posting_language: Literal["es", "en"]
     english_required: Tri
     requirements: list[Requirement]
@@ -96,6 +100,21 @@ class JobAnalysis(BaseModel):
     blockers: list[str] = Field(description="Motivos concretos por los que no conviene postularse")
     fit_score: int = Field(ge=0, le=100)
     rationale: str = Field(description="2 a 4 oraciones: por qué ese puntaje")
+
+
+class SalaryBand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    min: float
+    max: float
+    source: str = Field(description="De dónde sale la banda, con fecha")
+
+
+class SalaryReference(BaseModel):
+    """Bandas de mercado en USD por mes, bruto, para el nivel del candidato."""
+
+    model_config = ConfigDict(extra="forbid")
+    local: SalaryBand | None = None
+    foreign: SalaryBand | None = None
 
 
 class Preferences(BaseModel):
@@ -110,6 +129,7 @@ class Preferences(BaseModel):
     fx_to_usd: dict[str, float] = Field(
         default={}, description="Unidades de moneda por 1 USD, ej. {'ARS': 1400}"
     )
+    salary_reference: SalaryReference = SalaryReference()
     max_years_required: int = 5
     excluded_role_families: list[RoleFamily] = []
     apply_threshold: int = 70

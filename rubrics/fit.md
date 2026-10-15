@@ -1,4 +1,4 @@
-version: fit-v1
+version: fit-v2
 
 # Rúbrica de encaje candidato–aviso
 
@@ -18,6 +18,7 @@ extracción tiene que ser fiel al aviso, aunque perjudique al candidato.
 | `work_location` | Ciudad y país si es híbrido o presencial. Vacío si es remoto. |
 | `remote_accepts_argentina` | `yes` si nombra Argentina, LatAm o "anywhere", o si la metadata de países aceptados incluye Argentina. `no` si restringe a otros países o husos incompatibles. Si no, `unclear`. |
 | `salary` | Solo si el aviso da un número. Nunca estimar. |
+| `employer_market` | `local` si la empresa contrata desde Argentina con condiciones locales (empresa argentina, aunque pague en dólares o cripto). `foreign` si la empresa es del exterior y contrata en Argentina en USD, como contractor o por EOR. Si no se puede saber, `unclear`. Define la banda de mercado para la recomendación salarial. |
 | `posting_language` | Idioma en que está escrito el aviso. Define el idioma del CV. |
 | `english_required` | `yes` si pide inglés explícitamente o el aviso está en inglés para un equipo internacional. |
 | `requirements` | Cada requisito del aviso, resumido **en el idioma del aviso** (sirve después para alinear el vocabulario del CV). `must` si es excluyente; `nice` si es deseable. |
