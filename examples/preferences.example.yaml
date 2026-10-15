@@ -20,6 +20,11 @@ excluded_role_families: [ml_research, ml_engineer, data, non_engineering]
 apply_threshold: 70
 maybe_threshold: 50
 
+remote_region_ok: ['argentin', '\b(latam|latin america|worldwide|anywhere)\b']
+remote_region_block: ['\b(united states|usa|canada|europe|uk|india)\b']
+priority_title: ['\b(ai|llm)\b', 'agent']
+max_new_per_source: 40
+
 title_include:
   - '\b(ai|ia|llm|genai)\b'
   - 'agent'

@@ -2,7 +2,7 @@
 
 import json
 
-from jobhunt.forms import parse_greenhouse, parse_html_form, parse_tally
+from jobhunt.forms import outbound_apply_link, parse_greenhouse, parse_html_form, parse_tally
 
 GREENHOUSE = {
     "questions": [
@@ -71,3 +71,11 @@ def test_html_generico_con_labels_radios_y_requeridos():
 
 def test_sin_formulario_no_es_legible():
     assert parse_html_form("<div id=root></div>", "u", "x").extractable is False
+
+
+def test_link_de_postulacion_que_sale_del_agregador():
+    html = """<a href="/remote-jobs">Más avisos</a>
+              <a href="https://weworkremotely.com/x">Apply later</a>
+              <a class="apply-btn" href="https://jobs.lever.co/acme/123">Apply for this position</a>"""
+    assert outbound_apply_link(html, "weworkremotely.com") == "https://jobs.lever.co/acme/123"
+    assert outbound_apply_link("<a href='/apply'>Apply</a>", "himalayas.app") is None

@@ -136,3 +136,15 @@ class Preferences(BaseModel):
     maybe_threshold: int = 50
     title_include: list[str] = Field(description="Regex: el título tiene que matchear alguna")
     title_exclude: list[str] = Field(description="Regex: si matchea alguna, se descarta")
+    priority_title: list[str] = Field(
+        default=[], description="Regex: estos títulos pasan primero cuando hay cupo")
+    deprioritize_title: list[str] = Field(
+        default=[], description="Regex: estos títulos pasan últimos cuando hay cupo (ej. senior)")
+    remote_region_ok: list[str] = Field(
+        default=[], description="Regex: regiones aceptables para un remoto (ej. latam, worldwide)")
+    remote_region_block: list[str] = Field(
+        default=[], description="Regex: si la ubicación nombra una región así y ninguna aceptable, se descarta")
+    max_posting_age_days: int | None = Field(
+        default=60, description="Avisos publicados hace más de esto se descartan sin analizar")
+    max_new_per_source: int = Field(
+        default=40, description="Avisos nuevos por fuente y por corrida; el resto queda para la siguiente")

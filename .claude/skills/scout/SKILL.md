@@ -9,14 +9,17 @@ Orquesta el primer paso del pipeline: fuentes → filtro previo → análisis �
 
 ## Pasos
 
-1. **Bajar avisos.** Por cada fuente (hoy: `startups_argentina`):
-   `.venv/bin/jobhunt fetch <fuente>`
+1. **Bajar avisos.** `.venv/bin/jobhunt fetch all` recorre todas las fuentes configuradas
+   (o `fetch <fuente>` para una sola). Cada fuente tiene un cupo de avisos nuevos por corrida
+   (`max_new_per_source`); lo que no entra queda para la próxima.
    Tarda: el cliente hace un request por vez con pausa. Si el agregador no tiene la descripción,
    la busca en el ATS de la empresa y deja el aviso en `pending` para re-analizarlo. Reportá el
-   resumen que imprime, incluidos los avisos con `description_unavailable`.
+   resumen que imprime: por fuente, cuántos pasaron, duplicados, diferidos y errores, y los
+   avisos con `description_unavailable`.
 2. **Ver pendientes.** `.venv/bin/jobhunt pending`. Si no hay, saltá al paso 4.
 3. **Analizar en paralelo.** Partí los IDs en lotes de hasta 8 y lanzá un subagente `job-scout`
-   por lote, todos en el mismo mensaje. A cada uno pasale solo su lista de IDs.
+   por lote, todos en el mismo mensaje (si hay más de 10 lotes, en tandas de 10). A cada uno
+   pasale solo su lista de IDs.
 4. **Ranking.** `.venv/bin/jobhunt report --decision apply maybe` y mostralo.
    Debajo, en 3 a 5 líneas: cuántos avisos quedaron en cada decisión, los motivos de descarte
    más frecuentes, y cualquier aviso que un subagente no pudo analizar.

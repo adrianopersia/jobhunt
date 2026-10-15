@@ -8,6 +8,7 @@ el 35% y el 65% según el puntaje de encaje. Nunca queda por debajo del piso del
 from __future__ import annotations
 
 from dataclasses import dataclass
+from statistics import quantiles
 
 from jobhunt.models import JobAnalysis, Preferences, SalaryBand
 from jobhunt.policy import monthly_usd_amount
@@ -46,7 +47,19 @@ def market_band(market: str, prefs: Preferences) -> tuple[SalaryBand, str]:
     raise ValueError("Falta salary_reference en las preferencias.")
 
 
-def suggest(analysis: JobAnalysis, prefs: Preferences, market: str | None = None) -> Suggestion:
+MIN_DATA_POINTS = 8
+
+
+def data_band(points: list[float]) -> SalaryBand | None:
+    """Percentiles 25–75 de avisos comparables con salario publicado, si hay suficientes."""
+    if len(points) < MIN_DATA_POINTS:
+        return None
+    q1, _, q3 = quantiles(points, n=4)
+    return SalaryBand(min=q1, max=q3, source=f"avisos comparables con salario publicado (n={len(points)})")
+
+
+def suggest(analysis: JobAnalysis, prefs: Preferences, market: str | None = None,
+            observed: SalaryBand | None = None) -> Suggestion:
     market = market or analysis.employer_market
     posted = analysis.salary
     lo = hi = None
@@ -55,6 +68,8 @@ def suggest(analysis: JobAnalysis, prefs: Preferences, market: str | None = None
         hi = monthly_usd_amount(posted.max, posted.currency, posted.period, prefs)
     if lo is not None and hi is not None and hi > lo:
         source = "banda publicada en el aviso"
+    elif observed is not None:
+        lo, hi, source = observed.min, observed.max, observed.source
     else:
         band, source = market_band(market, prefs)
         lo, hi = band.min, band.max

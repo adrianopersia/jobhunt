@@ -53,7 +53,33 @@ def listing_filter_reason(title: str, location: str, prefs: Preferences) -> str 
     if _ON_SITE_RE.search(location) and not _REMOTE_RE.search(location):
         if not any(k.lower() in location.lower() for k in prefs.home_city_keywords):
             return "híbrido o presencial fuera de la ciudad"
+    if any(re.search(p, location, re.IGNORECASE) for p in prefs.remote_region_block):
+        home = any(k.lower() in location.lower() for k in prefs.home_city_keywords)
+        if not home and not any(re.search(p, location, re.IGNORECASE) for p in prefs.remote_region_ok):
+            return "restringido a otra región"
     return None
+
+
+def too_old(posted_at: str | None, prefs: Preferences, today=None) -> bool:
+    from datetime import UTC, datetime
+
+    if not posted_at or prefs.max_posting_age_days is None:
+        return False
+    try:
+        posted = datetime.fromisoformat(posted_at.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if posted.tzinfo is None:
+        posted = posted.replace(tzinfo=UTC)
+    now = today or datetime.now(UTC)
+    return (now - posted).days > prefs.max_posting_age_days
+
+
+def title_priority(title: str, prefs: Preferences) -> int:
+    """2: prioritario y no despriorizado; 1: uno de los dos; 0: despriorizado y no prioritario."""
+    boost = any(re.search(p, title, re.IGNORECASE) for p in prefs.priority_title)
+    demote = any(re.search(p, title, re.IGNORECASE) for p in prefs.deprioritize_title)
+    return int(boost) + int(not demote)
 
 
 _USD_LIKE = {"USD", "USDT", "USDC"}

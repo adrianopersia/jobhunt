@@ -23,15 +23,17 @@ from jobhunt.http import PoliteClient
 from jobhunt.keywords import coverage, posting_terms
 from jobhunt.models import JobAnalysis, Preferences
 from jobhunt.profile import validate as validate_profile
-from jobhunt.salary import suggest as suggest_salary
-from jobhunt.policy import decide, listing_filter_reason
-from jobhunt.sources import startups_argentina
+from jobhunt.salary import data_band, suggest as suggest_salary
+from jobhunt.policy import monthly_usd_amount
+from jobhunt.policy import decide, listing_filter_reason, title_priority, too_old
+from jobhunt.sources import ats_boards, getonbrd, himalayas, jobicy, manual, startups_argentina, wwr
+from jobhunt.sources.base import FetchContext
 from jobhunt.store import Store
 
 ROOT = Path(__file__).resolve().parents[2]
 HOME = Path(os.environ.get("JOBHUNT_HOME", ROOT / "private"))
 RUBRIC = ROOT / "rubrics" / "fit.md"
-SOURCES = {startups_argentina.SOURCE: startups_argentina}
+SOURCES = {m.SOURCE: m for m in (startups_argentina, ats_boards, getonbrd, himalayas, jobicy, wwr)}
 
 
 def load_prefs() -> Preferences:
@@ -50,38 +52,91 @@ def rubric_version() -> str:
 
 def cmd_fetch(args, store: Store) -> None:
     prefs = load_prefs()
-    source = SOURCES[args.source]
-    new = filtered = details = 0
+    names = sorted(SOURCES) if args.source == "all" else [args.source]
+    summary = {}
     with PoliteClient(delay_s=args.delay) as client:
-        stubs = list(source.iter_listing(client, max_pages=args.max_pages))
-        # Solo con el listado completo se puede saber qué avisos se cerraron.
-        gone = [] if args.max_pages else store.mark_gone(source.SOURCE, {s.id for s in stubs})
-        for stub in stubs:
-            new += store.upsert_stub(stub)
-            if listing_filter_reason(stub.title, stub.location, prefs):
-                store.set_status(stub.id, "filtered")
-                filtered += 1
-                continue
-            if store.needs_detail(stub.id):
-                store.save_detail(stub.id, source.fetch_detail(client, stub))
-                details += 1
-                store.commit()
+        for name in names:
+            try:
+                summary[name] = _fetch_source(SOURCES[name], client, store, prefs, args)
+            except Exception as err:  # una fuente caída no frena las demás
+                summary[name] = {"error": f"{type(err).__name__}: {err}"}
+            store.commit()
         backfilled, unavailable = [], []
         for row in store.missing_description():
             try:
                 text = fetch_description(client, row["apply_url"])
-            except Exception as err:  # una página caída no frena el resto
+            except Exception as err:
                 print(f"ATS sin respuesta para {row['id']}: {err}", file=sys.stderr)
                 text = ""
             store.save_ats_description(row["id"], text)
             (backfilled if text else unavailable).append(f"{row['company']}: {row['title']}")
             store.commit()
     print(json.dumps({
-        "listed": len(stubs), "new": new, "filtered_by_title": filtered,
-        "details_fetched": details, "closed_since_last_fetch": len(gone),
-        "description_from_ats": backfilled,
+        "sources": summary, "description_from_ats": backfilled,
         "description_unavailable": unavailable, "status_counts": store.counts(),
     }, ensure_ascii=False, indent=1))
+
+
+def _fetch_source(source, client: PoliteClient, store: Store, prefs: Preferences, args) -> dict:
+    ctx = FetchContext(home=HOME, max_pages=args.max_pages)
+    listings = list(source.iter_jobs(client, ctx))
+    gone = store.mark_gone(source.SOURCE, {l.stub.id for l in listings}) if ctx.complete else []
+    new = filtered = duplicates = 0
+    candidates = []
+    for listing in listings:
+        stub = listing.stub
+        new += store.upsert_stub(stub)
+        if store.get(stub.id)["status"] not in ("listed", "filtered"):
+            continue  # ya procesado en una corrida anterior
+        reason = listing_filter_reason(stub.title, stub.location, prefs)
+        if not reason and listing.detail and too_old(listing.detail.posted_at, prefs):
+            reason = "aviso viejo"
+        if reason:
+            store.set_status(stub.id, "filtered")
+            filtered += 1
+        elif store.duplicate_of(stub.id):
+            store.set_status(stub.id, "duplicate")
+            duplicates += 1
+        else:
+            store.set_status(stub.id, "listed")
+            candidates.append(listing)
+    candidates.sort(key=lambda l: title_priority(l.stub.title, prefs), reverse=True)
+    quota = args.limit or prefs.max_new_per_source
+    details = 0
+    for listing in candidates[:quota]:
+        try:
+            detail = listing.detail or source.fetch_detail(client, listing.stub)
+        except Exception as err:
+            ctx.errors.append(f"{listing.stub.id}: {err}")
+            continue
+        store.save_detail(listing.stub.id, detail)
+        details += 1
+        store.commit()
+    return {
+        "listed": len(listings), "new": new, "filtered": filtered, "duplicates": duplicates,
+        "analyzable": details, "deferred_to_next_run": max(len(candidates) - quota, 0),
+        "closed_since_last_fetch": len(gone), "errors": ctx.errors[:5],
+    }
+
+
+def cmd_add(args, store: Store) -> None:
+    prefs = load_prefs()
+    with PoliteClient() as client:
+        for url in args.urls:
+            try:
+                listing = manual.fetch_listing(client, url)
+            except Exception as err:
+                print(f"No pude leer {url}: {err}", file=sys.stderr)
+                continue
+            stub = listing.stub
+            store.upsert_stub(stub)
+            store.save_detail(stub.id, listing.detail)
+            store.commit()
+            warning = listing_filter_reason(stub.title, stub.location, prefs)
+            print(json.dumps({"id": stub.id, "title": stub.title, "company": stub.company,
+                              "status": store.get(stub.id)["status"],
+                              "warning": f"los filtros lo habrían descartado: {warning}" if warning else None},
+                             ensure_ascii=False))
 
 
 def cmd_pending(args, store: Store) -> None:
@@ -309,7 +364,11 @@ def cmd_app_form(args, store: Store) -> None:
     if not row["apply_url"]:
         sys.exit("El aviso no tiene link de postulación.")
     with PoliteClient() as client:
-        form = fetch_form(client, row["apply_url"])
+        try:
+            form = fetch_form(client, row["apply_url"])
+        except Exception as err:  # 403, timeout, etc.: el paquete se arma igual, para completar a mano
+            form = ApplicationForm(url=row["apply_url"], system="unknown", extractable=False,
+                                   notes=[f"No se pudo leer el formulario ({type(err).__name__}: {err}); completarlo a mano."])
     (folder / "form.json").write_text(form.model_dump_json(indent=1), encoding="utf-8")
     print(f"Formulario: {form.system} ({'legible' if form.extractable else 'NO legible: revisar a mano'})")
     for note in form.notes:
@@ -374,13 +433,47 @@ def cmd_cv_sources(args) -> None:
         show(f"proyecto {project.title}", project.text, project.source_ids)
 
 
+# Solo fuentes donde el salario publicado es lo que se paga en la región. Las bandas que publican
+# empresas de EE.UU. en boards globales son para gente en EE.UU. y no sirven de referencia.
+REGIONAL_SALARY_SOURCES = {"getonbrd", "startups_argentina"}
+
+
+def _salary_points(store: Store, prefs: Preferences) -> dict[tuple[str, str], list[float]]:
+    """Salarios mensuales en USD de avisos regionales que aceptan Argentina, por (quién paga, seniority)."""
+    ceiling = 2 * max((b.max for b in (prefs.salary_reference.local, prefs.salary_reference.foreign) if b),
+                      default=float("inf"))
+    points: dict[tuple[str, str], list[float]] = {}
+    for row in store.analyses_with_salary():
+        if row["source"] not in REGIONAL_SALARY_SOURCES:
+            continue
+        a = JobAnalysis.model_validate_json(row["analysis"])
+        if a.remote_accepts_argentina != "yes" and a.modality.value == "remote":
+            continue
+        amounts = [v for v in (a.salary.min, a.salary.max) if v is not None]
+        usd = monthly_usd_amount(sum(amounts) / len(amounts), a.salary.currency, a.salary.period, prefs) if amounts else None
+        if usd and usd <= ceiling:
+            points.setdefault((a.employer_market, a.seniority.value), []).append(usd)
+    return points
+
+
+def cmd_salary_market(args, store: Store) -> None:
+    from statistics import median
+    print("| Quién paga | Seniority | n | Mínimo | Mediana | Máximo |")
+    print("|---|---|---|---|---|---|")
+    for (market, seniority), values in sorted(_salary_points(store, load_prefs()).items()):
+        print(f"| {market} | {seniority} | {len(values)} | {min(values):,.0f} | {median(values):,.0f} | {max(values):,.0f} |")
+
+
 def cmd_salary(args, store: Store) -> None:
     analysis = store.analysis(args.job_id)
     if not analysis:
         sys.exit(f"{args.job_id} no tiene análisis.")
     parsed = JobAnalysis.model_validate_json(analysis["analysis"])
+    prefs = load_prefs()
+    market = args.market or parsed.employer_market
+    observed = data_band(_salary_points(store, prefs).get((market, "semi_senior"), []))
     try:
-        s = suggest_salary(parsed, load_prefs(), market=args.market)
+        s = suggest_salary(parsed, prefs, market=args.market, observed=observed)
     except ValueError as err:
         sys.exit(str(err))
     print(json.dumps({
@@ -388,6 +481,28 @@ def cmd_salary(args, store: Store) -> None:
         "market": args.market or parsed.employer_market, "source": s.source,
         "rationale": s.rationale,
     }, ensure_ascii=False, indent=1))
+
+
+def cmd_eval_inputs(args) -> None:
+    from jobhunt import evals
+    cases = evals.load_cases(ROOT / "evals" / "auditor" / "cases.jsonl")
+    Path(args.out).write_text("\n".join(json.dumps(c, ensure_ascii=False) for c in evals.blind(cases)) + "\n",
+                              encoding="utf-8")
+    print(f"{len(cases)} casos sin etiqueta en {args.out}")
+
+
+def cmd_eval_score(args) -> None:
+    from jobhunt import evals
+    cases = evals.load_cases(ROOT / "evals" / "auditor" / "cases.jsonl")
+    raw = json.loads(Path(args.predictions).read_text(encoding="utf-8"))
+    predictions = {p["id"]: p["verdict"] for p in raw}
+    s = evals.score(cases, predictions)
+    text = evals.report(args.name, s, cases)
+    out = ROOT / "evals" / "auditor" / "results"
+    out.mkdir(parents=True, exist_ok=True)
+    (out / f"{args.name}.md").write_text(text, encoding="utf-8")
+    (out / f"{args.name}.predictions.json").write_text(json.dumps(raw, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(text)
 
 
 def cmd_cv_check(args) -> None:
@@ -409,10 +524,15 @@ def main(argv: list[str] | None = None) -> None:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("fetch", help="Bajar avisos de una fuente")
-    p.add_argument("source", choices=sorted(SOURCES))
+    p.add_argument("source", choices=sorted(SOURCES) + ["all"])
     p.add_argument("--max-pages", type=int)
+    p.add_argument("--limit", type=int, help="Cupo de avisos nuevos por fuente (pisa la preferencia)")
     p.add_argument("--delay", type=float, default=1.5)
     p.set_defaults(func=cmd_fetch)
+
+    p = sub.add_parser("add", help="Sumar avisos a mano por URL (Greenhouse, Lever, Ashby o cualquier página)")
+    p.add_argument("urls", nargs="+")
+    p.set_defaults(func=cmd_add)
 
     p = sub.add_parser("pending", help="Avisos esperando análisis")
     p.add_argument("--limit", type=int)
@@ -461,11 +581,24 @@ def main(argv: list[str] | None = None) -> None:
     c.add_argument("doc")
     c.set_defaults(func=cmd_cv_sources)
 
+    p = sub.add_parser("eval", help="Evals del auditor semántico")
+    eval_sub = p.add_subparsers(dest="eval_cmd", required=True)
+    e = eval_sub.add_parser("auditor-inputs", help="Casos sin etiqueta para el juez")
+    e.add_argument("--out", required=True)
+    e.set_defaults(func=cmd_eval_inputs)
+    e = eval_sub.add_parser("auditor-score", help="Puntuar las predicciones del juez")
+    e.add_argument("predictions")
+    e.add_argument("--name", required=True)
+    e.set_defaults(func=cmd_eval_score)
+
     p = sub.add_parser("salary", help="Recomendación salarial para un aviso analizado")
     p.add_argument("job_id")
     p.add_argument("--market", choices=["local", "foreign", "unclear"],
                    help="Forzar quién paga si el análisis no lo sabe")
     p.set_defaults(func=cmd_salary)
+
+    p = sub.add_parser("salary-market", help="Salarios publicados en los avisos analizados")
+    p.set_defaults(func=cmd_salary_market)
 
     p = sub.add_parser("app", help="Carpetas de postulación")
     app_sub = p.add_subparsers(dest="app_cmd", required=True)
@@ -487,7 +620,7 @@ def main(argv: list[str] | None = None) -> None:
     a.set_defaults(func=cmd_app_list)
 
     args = parser.parse_args(argv)
-    if args.cmd in ("schema", "cv") and not getattr(args, "needs_store", False):
+    if args.cmd in ("schema", "cv", "eval") and not getattr(args, "needs_store", False):
         args.func(args)
         return
     args.func(args, Store(HOME / "jobhunt.db"))

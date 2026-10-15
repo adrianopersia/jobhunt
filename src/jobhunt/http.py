@@ -32,7 +32,13 @@ class PoliteClient:
             if wait > 0:
                 time.sleep(wait)
             self._last = time.monotonic()
-            response = self._client.get(url, headers=headers)
+            try:
+                response = self._client.get(url, headers=headers)
+            except httpx.TransportError:  # conexión cortada o timeout: se reintenta igual que un 5xx
+                if attempt < self.retries:
+                    time.sleep(self.delay_s * 2 ** (attempt + 1))
+                    continue
+                raise
             if response.status_code == 429 or response.status_code >= 500:
                 if attempt < self.retries:
                     time.sleep(self.delay_s * 2 ** (attempt + 1))
