@@ -9,6 +9,12 @@ salary_floor_usd_month: 1500
 # Unidades de moneda local por 1 USD. Sin tipo de cambio, el piso no se aplica a esa moneda.
 fx_to_usd: {}
 
+# Bandas de mercado en USD/mes, bruto, para tu nivel. Con esto `jobhunt salary` recomienda
+# cuánto pedir cuando el aviso no publica salario. Citá la fuente y la fecha.
+salary_reference:
+  local: {min: 1500, max: 2000, source: "encuesta de sueldos local, 2026"}
+  foreign: {min: 2500, max: 4000, source: "guía de salarios remotos, 2026"}
+
 max_years_required: 5
 excluded_role_families: [ml_research, ml_engineer, data, non_engineering]
 apply_threshold: 70

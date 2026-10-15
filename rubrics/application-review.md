@@ -1,4 +1,4 @@
-version: review-v1
+version: review-v2
 
 # Guía para revisar una postulación antes de que el candidato la envíe
 
@@ -36,15 +36,20 @@ Una entrada en `answers.json` por cada campo de `form.json`. Las acciones posibl
 | CV o currículum (archivo) | `attach_cv` |
 | Archivo obligatorio sin título | `attach_cv`, con una nota para que el candidato confirme qué piden |
 | Sí/No o selección sobre algo que el perfil respalda (título, inglés, tecnologías) | `answer` citando las fuentes |
-| Sí/No sobre algo que el perfil no dice (residencia, permiso de trabajo, disponibilidad) | `candidate_decides` |
+| Algo que el perfil responde con un hecho (permiso de trabajo, promedio) | `answer` citando ese hecho |
+| Sí/No sobre algo que el perfil no dice (residencia, disponibilidad) | `candidate_decides` |
 | Selección múltiple de tecnologías | `answer` con **solo** las que el perfil respalda; las demás no se marcan |
 | Texto libre (contanos sobre vos, tu experiencia) | `answer`: borrador en el idioma del aviso, en primera persona, de 80 a 150 palabras, concreto, con `source_ids`. Pueden citarse items `interview`, porque estas respuestas son como una entrevista escrita |
-| Salario, fecha de inicio, promedio, video, cómo se enteró | `candidate_decides`, con una nota que dé contexto |
+| Salario, fecha de inicio, video, cómo se enteró | `candidate_decides`, con una nota que dé contexto |
 | Opcional sin nada cierto para decir | `skip_optional` |
 
 Para las notas de `candidate_decides`:
-- **Salario:** lo que diga el aviso o la empresa sobre rangos, si dice algo. Recordá que el piso
-  de las preferencias es para filtrar, no para responder. Nunca propongas un número.
+- **Salario:** corré `jobhunt salary <id>`. Si el análisis dice `employer_market: unclear` y el
+  aviso deja claro quién paga, repetilo con `--market local` o `--market foreign`. Poné
+  `ask_usd_month` en `suggested`, en la moneda y el período que pide el campo (si pide USDT o
+  anual, convertilo y decilo). En la nota van el rango aceptable, la banda y su fuente, en una o
+  dos líneas. El número final sigue siendo del candidato: la acción es `candidate_decides`. Nunca
+  inventes otra cifra ni uses el piso de las preferencias como respuesta.
 - **Cómo se enteró:** el aviso vino del agregador indicado en `posting.md`. Si no está entre las
   opciones, sugerí la más cercana que sea verdad, o "Otro".
 
@@ -63,5 +68,6 @@ vos.
    `fiel`, más el total.
 3. **Para enviar, en orden:** el link del formulario, qué archivo adjuntar (ruta completa) y,
    por cada campo, qué poner. Las respuestas de texto, listas para copiar.
-4. **Lo que tenés que decidir vos:** cada `candidate_decides`, con su nota.
+4. **Lo que tenés que decidir vos:** cada `candidate_decides`, con su nota y el valor sugerido
+   si lo hay (para el salario: "Recomendado: USD X; rango aceptable: Y–Z").
 5. **Avisos:** uso de IA declarado por la empresa, preguntas demográficas, campos raros.

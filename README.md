@@ -30,6 +30,7 @@ with the LLM kept away from decisions that code can make.
 | Semantic CV audit | LLM (`application-reviewer`, Opus), separate from the writer | Whether a rephrased bullet overstates its source takes reading. The agent that wrote the CV doesn't audit it. |
 | Form reading | Code (`forms.py`): Greenhouse API, Tally's embedded JSON, plain HTML forms | Field lists, types and options are structured data. No browser, nothing submitted. |
 | Form answers | LLM drafts, code verifies (`answers.py`) | Every required field answered or explicitly handed to me; options must exist; selected technologies and numbers must be backed by the profile; salary and dates are always my call. |
+| Salary recommendation | Code (`salary.py`) | The posted band if there is one, otherwise a sourced market band for who's paying (local or foreign employer). The ask lands between 35% and 65% of the band depending on fit, never below my floor. It's a suggestion: I type the number. |
 | Submitting | Me | Not automated, by design. |
 
 ## Grounded CV generation
@@ -88,11 +89,19 @@ robots.txt allows. When an aggregator has no description, the pipeline fetches i
 company's ATS (BambooHR's public JSON, or plain HTML). On the first run this changed two
 verdicts: the aggregator said "remote", but the real posting said hybrid.
 
+## Running it every couple of weeks
+
+`/hunt` runs a full cycle from a fresh session. It reads the previous cycle's date from
+`private/runs/`, asks about news on submitted applications, fetches and scores new postings,
+lets me pick (all "apply" by default, max 5), tailors, reviews, and writes a cycle digest with the
+ready packages and what's left for me to decide. Postings that disappear from a source are marked
+closed, and come back if they're republished.
+
 ## Layout
 
 ```
 .claude/agents/        job-scout, cv-tailor, application-reviewer
-.claude/skills/        /scout, /tailor, /review (orchestration: batches, parallel subagents)
+.claude/skills/        /hunt (full cycle), /scout, /tailor, /review
 rubrics/               fit.md, cv-tailoring.md, application-review.md
 src/jobhunt/
   sources/             one module per job board
@@ -102,6 +111,7 @@ src/jobhunt/
   keywords.py          ATS-style keyword coverage
   forms.py             application form readers (no submission)
   answers.py           form answer verifier
+  salary.py            salary recommendation
   cv.py                CV document model and HTML → PDF render (headless Chrome)
   cli.py               the only way agents write to the database
 templates/cv.html.j2   single-column CV template
@@ -128,7 +138,8 @@ cp examples/preferences.example.yaml private/preferences.yaml   # then edit
 .venv/bin/pytest
 ```
 
-The agents run inside Claude Code through `/scout`, `/tailor` and `/review`.
+The agents run inside Claude Code. `/hunt` runs everything; `/scout`, `/tailor` and `/review`
+run one stage each.
 
 ## Roadmap
 

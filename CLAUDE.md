@@ -5,6 +5,11 @@ cv-tailor arma un CV anclado a evidencia por aviso, y el application-reviewer re
 formulario de postulación. **El envío lo hace siempre la persona, a mano.** Ningún agente se
 postula, completa formularios en el sitio real ni manda mensajes en nombre del candidato.
 
+## Cómo se usa
+
+`/hunt` corre un ciclo completo desde una sesión nueva. `/scout`, `/tailor` y `/review` corren
+una etapa sola. El estado del ciclo anterior está en `private/runs/ciclo-*.md`.
+
 ## Datos privados — regla dura
 
 Este repo va a ser público. Todo lo personal vive en `private/` (ignorado por git): perfil,

@@ -4,6 +4,7 @@
   filtered   -> descartado por título (no se baja el detalle)
   pending    -> con detalle, esperando análisis del agente
   analyzed   -> con análisis y decisión
+  gone       -> ya no aparece en el listado de la fuente (se cerró o se despublicó)
 """
 
 from __future__ import annotations
@@ -79,6 +80,12 @@ class Store:
             (ts, stub.title, stub.location, stub.id),
         )
         if cur.rowcount:
+            # Si había desaparecido y vuelve a estar publicado, recupera su estado.
+            self.db.execute(
+                "UPDATE jobs SET status = CASE WHEN EXISTS (SELECT 1 FROM analyses WHERE job_id = jobs.id)"
+                " THEN 'analyzed' ELSE 'pending' END WHERE id = ? AND status = 'gone'",
+                (stub.id,),
+            )
             return False
         self.db.execute(
             "INSERT INTO jobs (id, source, external_id, url, title, company, location,"
@@ -87,6 +94,15 @@ class Store:
              stub.company, stub.location, ts, ts),
         )
         return True
+
+    def mark_gone(self, source: str, seen_ids: set[str]) -> list[str]:
+        """Marca como cerrados los avisos de la fuente que no aparecieron en el listado completo."""
+        rows = self.db.execute(
+            "SELECT id FROM jobs WHERE source = ? AND status IN ('pending', 'analyzed')", (source,)
+        ).fetchall()
+        gone = [r["id"] for r in rows if r["id"] not in seen_ids]
+        self.db.executemany("UPDATE jobs SET status = 'gone' WHERE id = ?", [(i,) for i in gone])
+        return gone
 
     def set_status(self, job_id: str, status: str) -> None:
         self.db.execute("UPDATE jobs SET status = ? WHERE id = ?", (status, job_id))
@@ -148,13 +164,24 @@ class Store:
         )
         self.set_status(job_id, "analyzed")
 
-    def ranked(self) -> list[sqlite3.Row]:
+    def ranked(self, include_gone: bool = False, since: str | None = None) -> list[sqlite3.Row]:
+        where = ["1 = 1"]
+        params: list[str] = []
+        if not include_gone:
+            where.append("j.status != 'gone'")
+        if since:
+            where.append("j.first_seen >= ?")
+            params.append(since)
         return self.db.execute(
-            "SELECT j.id, j.title, j.company, j.url, j.apply_url, j.ats, j.posted_at,"
-            " a.fit_score, a.decision, a.decision_reasons, a.analysis"
+            "SELECT j.id, j.title, j.company, j.url, j.apply_url, j.ats, j.posted_at, j.status,"
+            " j.first_seen, a.fit_score, a.decision, a.decision_reasons, a.analysis,"
+            " p.status AS app_status"
             " FROM analyses a JOIN jobs j ON j.id = a.job_id"
+            " LEFT JOIN applications p ON p.job_id = j.id"
+            f" WHERE {' AND '.join(where)}"
             " ORDER BY CASE a.decision WHEN 'apply' THEN 0 WHEN 'maybe' THEN 1 ELSE 2 END,"
-            " a.fit_score DESC"
+            " a.fit_score DESC",
+            params,
         ).fetchall()
 
     def analysis(self, job_id: str) -> sqlite3.Row | None:
@@ -173,7 +200,7 @@ class Store:
 
     def applications(self) -> list[sqlite3.Row]:
         return self.db.execute(
-            "SELECT p.*, j.title, j.company, a.fit_score FROM applications p"
+            "SELECT p.*, j.title, j.company, j.status AS job_status, a.fit_score FROM applications p"
             " JOIN jobs j ON j.id = p.job_id LEFT JOIN analyses a ON a.job_id = p.job_id"
             " ORDER BY p.updated_at DESC"
         ).fetchall()

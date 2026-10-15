@@ -27,6 +27,8 @@ class Answer(BaseModel):
         "skip_optional: campo opcional que conviene dejar vacío."))
     value: str | list[str] | None = None
     source_ids: list[str] = Field(default=[], description="IDs del perfil que respaldan la respuesta")
+    suggested: str | None = Field(
+        default=None, description="Valor recomendado cuando decide el candidato (ej. salario)")
     note: str = Field(default="", description="Para el candidato: contexto o sugerencia")
 
 

@@ -56,6 +56,17 @@ def listing_filter_reason(title: str, location: str, prefs: Preferences) -> str 
     return None
 
 
+_USD_LIKE = {"USD", "USDT", "USDC"}
+
+
+def monthly_usd_amount(amount: float, currency: str, period: str, prefs: Preferences) -> float | None:
+    currency = currency.upper()
+    rate = 1.0 if currency in _USD_LIKE else prefs.fx_to_usd.get(currency)
+    if rate is None:
+        return None
+    return amount * _PERIOD_TO_MONTH[period] / rate
+
+
 def monthly_usd(analysis: JobAnalysis, prefs: Preferences) -> float | None:
     salary = analysis.salary
     if not salary:
@@ -63,11 +74,7 @@ def monthly_usd(analysis: JobAnalysis, prefs: Preferences) -> float | None:
     amount = salary.max if salary.max is not None else salary.min
     if amount is None:
         return None
-    currency = salary.currency.upper()
-    rate = 1.0 if currency == "USD" else prefs.fx_to_usd.get(currency)
-    if rate is None:
-        return None
-    return amount * _PERIOD_TO_MONTH[salary.period] / rate
+    return monthly_usd_amount(amount, salary.currency, salary.period, prefs)
 
 
 @dataclass
