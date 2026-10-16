@@ -76,13 +76,19 @@ def suggest(analysis: JobAnalysis, prefs: Preferences, market: str | None = None
         source = f"{source} ({band.source})"
 
     pos = position_for(analysis.fit_score)
+    if posted and posted.location_adjusted and source == "banda publicada en el aviso":
+        # La banda es para el país de la empresa: desde Argentina, anclar cerca del piso.
+        pos = 0.10
+        source += ", ajustable por ubicación"
     floor = prefs.salary_floor_usd_month or 0
     ask = max(_round(lo + (hi - lo) * pos), _round(floor))
-    low = max(_round(lo + (hi - lo) * (pos - 0.15)), _round(floor))
+    low = max(_round(lo + (hi - lo) * max(pos - 0.15, 0.0)), _round(floor))
     high = max(_round(lo + (hi - lo) * (pos + 0.15)), ask)
     rationale = (
         f"Banda USD {lo:,.0f}–{hi:,.0f}/mes ({source}). Con encaje {analysis.fit_score}, "
         f"la propuesta queda al {pos:.0%} de la banda: sin pedir el techo cuando hay huecos, "
         f"y sin regalar el piso cuando el perfil cubre lo que piden."
     )
+    if pos == 0.10:
+        rationale += " Como la banda se ajusta por ubicación, se ancla cerca del piso."
     return Suggestion(ask, low, high, (round(lo), round(hi)), source, rationale)
