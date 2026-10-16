@@ -88,3 +88,10 @@ def test_calibracion_solo_con_salarios_regionales(tmp_path):
         store.save_analysis(stub.id, a, Decision("apply", []), "v")
     points = _salary_points(store, PREFS)
     assert points == {("foreign", "semi_senior"): [3000.0]}  # wwr (EE.UU.) y el que no acepta Argentina, afuera
+
+
+def test_banda_ajustable_por_ubicacion_se_ancla_cerca_del_piso():
+    s = suggest(analysis(fit=70, salary={"min": 120000, "max": 180000, "currency": "USD", "period": "year",
+                                          "location_adjusted": True}), PREFS)
+    assert s.band == (10000, 15000)
+    assert s.ask == 10500 and s.low == 10000

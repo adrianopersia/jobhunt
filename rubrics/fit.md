@@ -17,7 +17,7 @@ extracción tiene que ser fiel al aviso, aunque perjudique al candidato.
 | `modality` | Lo que diga el cuerpo del aviso; si no dice nada, la metadata del sitio. |
 | `work_location` | Ciudad y país si es híbrido o presencial. Vacío si es remoto. |
 | `remote_accepts_argentina` | `yes` si nombra Argentina, LatAm o "anywhere", o si la metadata de países aceptados incluye Argentina. `no` si restringe a otros países o husos incompatibles. Si no, `unclear`. |
-| `salary` | Solo si el aviso da un número. Nunca estimar. |
+| `salary` | Solo si el aviso da un número. Nunca estimar. `location_adjusted: true` si el aviso dice que la banda depende de la ubicación ("commensurate with location", "US base", "adjusted by geography"). |
 | `employer_market` | `local` si la empresa contrata desde Argentina con condiciones locales (empresa argentina, aunque pague en dólares o cripto). `foreign` si la empresa es del exterior y contrata en Argentina en USD, como contractor o por EOR. Si no se puede saber, `unclear`. Define la banda de mercado para la recomendación salarial. |
 | `posting_language` | Idioma en que está escrito el aviso. Define el idioma del CV. |
 | `english_required` | `yes` si pide inglés explícitamente o el aviso está en inglés para un equipo internacional. |

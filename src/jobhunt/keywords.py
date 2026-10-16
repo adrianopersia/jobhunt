@@ -20,12 +20,17 @@ ALIASES = {
     "postgresql": ["postgresql", "postgres"],
     "react": ["react"],
     "react native": ["react native"],
-    "rest apis": ["rest api", "rest apis", "restful"],
     "ci/cd": ["ci/cd"],
     "llm": ["llm", "llms"],
     "golang": ["golang", "go"],
     "tailwindcss": ["tailwindcss", "tailwind"],
     "github actions": ["github actions"],
+    # Frases genéricas que el scout extrae como "stack": cuentan si el CV nombra algo concreto.
+    "relational databases": ["relational database", "relational databases", "postgresql", "postgres", "mysql", "sql"],
+    "third-party apis": ["third-party api", "third-party apis", "api integrations"],
+    "rest apis": ["rest api", "rest apis", "restful"],
+    "websockets": ["websockets", "websocket", "socket.io"],
+    "automated testing": ["automated tests", "unit tests", "jest", "e2e"],
 }
 
 

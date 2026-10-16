@@ -33,3 +33,9 @@ def test_suma_skills_del_perfil_que_el_aviso_nombra():
 def test_terminos_con_barra_se_separan_salvo_nombres_conocidos():
     terms = posting_terms(["JavaScript/TypeScript", "CI/CD", "AWS/Azure/GCP"], "", PROFILE)
     assert terms == ["JavaScript", "TypeScript", "CI/CD", "AWS", "Azure", "GCP"]
+
+
+def test_frases_genericas_cuentan_con_terminos_concretos():
+    cov = coverage(["Relational databases", "Third-party APIs"],
+                   "PostgreSQL search; third-party API integrations.", PROFILE)
+    assert cov.present == ["Relational databases", "Third-party APIs"]

@@ -68,6 +68,8 @@ class Salary(BaseModel):
     max: float | None = None
     currency: str = Field(description="ISO 4217, ej. USD, ARS")
     period: Literal["hour", "month", "year"]
+    location_adjusted: bool = Field(
+        default=False, description="El aviso dice que la banda se ajusta por ubicación o que es de EE.UU.")
 
 
 class Requirement(BaseModel):
