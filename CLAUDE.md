@@ -10,7 +10,10 @@ postula, completa formularios en el sitio real ni manda mensajes en nombre del c
 `/hunt` corre un ciclo completo desde una sesión nueva. `/scout`, `/tailor` y `/review` corren
 una etapa sola. El estado del ciclo anterior está en `private/runs/ciclo-*.md`. Las fuentes
 están en `src/jobhunt/sources/`; las empresas de los boards, en `private/boards.yaml`. Los avisos
-que el candidato encuentre por su cuenta entran con `jobhunt add <url>`.
+que el candidato encuentre por su cuenta entran con `jobhunt add <url>`. Los de LinkedIn, Indeed o
+Glassdoor no se leen de forma automática (robots.txt): el candidato pega el texto con
+`jobhunt add --paste`. `jobhunt app clean` borra lo no enviado y lo rechazado; lo enviado se
+conserva.
 
 ## Datos privados — regla dura
 

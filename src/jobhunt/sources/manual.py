@@ -20,8 +20,31 @@ from jobhunt.sources.base import Listing
 
 SOURCE = "manual"
 
+# Sitios cuyo robots.txt no permite leer avisos de forma automática. Para estos, el texto lo
+# pega el candidato (`jobhunt add --paste`), o se usa el link al ATS de la empresa si el aviso
+# dice "Apply on company website".
+NO_FETCH_HOSTS = ("linkedin.com", "indeed.com", "glassdoor.com")
+
+
+def no_fetch(url: str) -> bool:
+    host = urlparse(url).netloc.lower()
+    return any(host == h or host.endswith("." + h) for h in NO_FETCH_HOSTS)
+
+
+def from_text(text: str, title: str, company: str, url: str = "", location: str = "") -> Listing:
+    """Aviso pegado a mano: el texto lo copió el candidato desde el sitio."""
+    key = url or f"{company}|{title}"
+    stub = JobStub(source=SOURCE, external_id=hashlib.sha1(key.encode()).hexdigest()[:12],
+                   url=url, title=title, company=company, location=location)
+    return Listing(stub, JobDetail(description=text.strip(), apply_url=url, location_raw=location or None))
+
 
 def fetch_listing(client: PoliteClient, url: str) -> Listing:
+    if no_fetch(url):
+        raise PermissionError(
+            f"{urlparse(url).netloc} no permite leer avisos de forma automática. Copiá el texto del "
+            "aviso a un archivo y usá `jobhunt add --paste <archivo> --title ... --company ... "
+            "--url <link>`; si el aviso dice \"Apply on company website\", pasá ese link en su lugar.")
     url = clean_url(url)
     if m := re.search(r"greenhouse\.io/([^/]+)/jobs/(\d+)", url):
         slug, job = m.groups()
