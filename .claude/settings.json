@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__.*[Gg]mail.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/gmail_linkedin_only.py\"",
+            "timeout": 10,
+            "onFailure": "block",
+            "statusMessage": "Guardia de Gmail: solo LinkedIn"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "mcp__.*[Gg]mail.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/gmail_linkedin_only.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

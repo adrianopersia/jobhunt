@@ -6,6 +6,8 @@
   analyzed   -> con análisis y decisión
   gone       -> ya no aparece en el listado de la fuente (se cerró o se despublicó)
   duplicate  -> el mismo aviso ya entró por otra fuente (misma empresa y título)
+  needs_text -> vino de una alerta de LinkedIn y no está en el board de la empresa:
+                falta que el candidato pegue el texto (`jobhunt add --paste`)
 """
 
 from __future__ import annotations

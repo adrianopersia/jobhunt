@@ -22,8 +22,15 @@ anteriores.
 
 ## 1. Avisos nuevos
 
-Si el usuario pasó links de avisos que encontró por su cuenta (LinkedIn, referidos), sumalos
-primero con `.venv/bin/jobhunt add <url> ...`. Después seguí `.claude/skills/scout/SKILL.md`
+**LinkedIn.** Si el conector de Gmail está disponible (herramientas `mcp__claude_ai_Gmail__*`),
+lanzá el subagente `linkedin-inbox` con N = días desde el ciclo anterior (como máximo 30). Si
+no está disponible, avisale al usuario que autorizando el conector de Gmail en claude.ai se suman
+sus alertas de LinkedIn, y seguí. Nunca leas Gmail desde el hilo principal: solo ese subagente,
+y bajo el hook que lo limita a emails de LinkedIn.
+
+Si el usuario pasó links de avisos que encontró por su cuenta, sumalos con
+`.venv/bin/jobhunt add <url> ...`; si pegó el texto de un aviso de LinkedIn, con
+`jobhunt add --paste`. Después seguí `.claude/skills/scout/SKILL.md`
 (bajar de todas las fuentes, analizar en paralelo y ranking).
 
 ## 2. Selección
@@ -54,6 +61,7 @@ Seguí `.claude/skills/review/SKILL.md` con los mismos avisos.
    - los paquetes listos, con la ruta de cada `review.md`;
    - lo que tiene que decidir en cada uno, con el salario recomendado;
    - las postulaciones cuyo aviso se cerró;
+   - los avisos de LinkedIn que esperan texto (`jobhunt linkedin pending`), con el link de cada uno;
    - el recordatorio: cuando envíe, que avise para marcarlas como `submitted`.
 
 ## Reglas

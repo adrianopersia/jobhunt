@@ -32,6 +32,22 @@ class JobDetail(BaseModel):
     location_requirements: list[str] = []
 
 
+class AlertJob(BaseModel):
+    """Un puesto tal como aparece en un email de alerta de LinkedIn."""
+
+    model_config = ConfigDict(extra="forbid")
+    title: str
+    company: str
+    location: str = ""
+    url: str = Field(description="Link al aviso en LinkedIn (linkedin.com/jobs/view/<id> o /comm/jobs/view/<id>)")
+
+
+class AlertBatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    received_from: str = Field(description="Remitente de los emails leídos; tiene que ser @linkedin.com")
+    jobs: list[AlertJob]
+
+
 class RoleFamily(StrEnum):
     APPLIED_AI = "applied_ai"
     AI_AUTOMATION = "ai_automation"

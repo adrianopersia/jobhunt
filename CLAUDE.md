@@ -15,6 +15,10 @@ Glassdoor no se leen de forma automática (robots.txt): el candidato pega el tex
 `jobhunt add --paste`. `jobhunt app clean` borra lo no enviado y lo rechazado; lo enviado se
 conserva.
 
+Las alertas de LinkedIn se leen del Gmail del candidato **solo** con el subagente
+`linkedin-inbox`, y solo emails de remitentes @linkedin.com. El hook
+`.claude/hooks/gmail_linkedin_only.py` lo hace cumplir: no lo desactives ni lo rodees.
+
 ## Datos privados — regla dura
 
 Este repo va a ser público. Todo lo personal vive en `private/` (ignorado por git): perfil,

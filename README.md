@@ -103,6 +103,12 @@ This repo is public. My real data is not.
   **local, untracked denylist**. The list itself contains the names that must not leak, so it
   can't be committed. If the list is missing, the guard fails closed.
 - Pre-push also checks that the remote belongs to an allowed GitHub account.
+- **The agent can only read LinkedIn emails.** A Claude Code hook (`.claude/hooks/gmail_linkedin_only.py`)
+  sits in front of every Gmail tool and fails closed:
+  - Searches pass only if every possible result is from an `@linkedin.com` sender, so `OR`, negations, braces and look-alike domains are rejected.
+  - A message or thread can be read only if one of those searches returned it.
+  - Any tool that sends, drafts, labels, deletes or modifies is blocked, and so is any unknown tool.
+  - If the hook itself fails, the call is blocked too.
 - Tests and examples use a fictional candidate.
 
 ## Sources
@@ -115,6 +121,7 @@ This repo is public. My real data is not.
 | [Himalayas](https://himalayas.app) | Public jobs API | Remote roles with structured country restrictions and salary |
 | [Jobicy](https://jobicy.com) | Public API, filtered to Argentina server-side | Small 7-day window; one pull per run |
 | [We Work Remotely](https://weworkremotely.com) | RSS feeds | Region field is unreliable, so the country list is checked too |
+| LinkedIn job alerts | The alert emails LinkedIn sends me, read from Gmail by a dedicated subagent | Nothing is fetched from linkedin.com. Each alert is looked up on the company's public board (Greenhouse, Lever, Ashby) to get the full description and the real form; if it isn't there, it waits for me to paste the text |
 | Manual | `jobhunt add <url>` or `jobhunt add --paste <file>` | For postings found elsewhere. LinkedIn, Indeed and Glassdoor links are never fetched (their robots.txt disallows it): paste the posting text, or the company's ATS link if it says "Apply on company website" |
 
 Left out on purpose: Remotive (its robots.txt disallows `/api/*`) and RemoteOK (no structured
