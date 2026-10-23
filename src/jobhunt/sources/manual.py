@@ -32,7 +32,16 @@ def no_fetch(url: str) -> bool:
 
 
 def from_text(text: str, title: str, company: str, url: str = "", location: str = "") -> Listing:
-    """Aviso pegado a mano: el texto lo copió el candidato desde el sitio."""
+    """Aviso pegado a mano: el texto lo copió el candidato desde el sitio. Si el link es de un
+    aviso de LinkedIn, usa el mismo ID que la alerta de email, así completa ese aviso."""
+    from jobhunt.sources import linkedin_alerts
+
+    if linkedin_alerts.job_id(url):
+        stub = JobStub(source=linkedin_alerts.SOURCE, external_id=linkedin_alerts.job_id(url),
+                       url=linkedin_alerts.canonical_url(url), title=title, company=company,
+                       location=location)
+        return Listing(stub, JobDetail(description=text.strip(), apply_url=stub.url,
+                                       location_raw=location or None))
     key = url or f"{company}|{title}"
     stub = JobStub(source=SOURCE, external_id=hashlib.sha1(key.encode()).hexdigest()[:12],
                    url=url, title=title, company=company, location=location)

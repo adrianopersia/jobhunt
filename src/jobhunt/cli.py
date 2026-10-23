@@ -147,6 +147,35 @@ def cmd_add(args, store: Store) -> None:
                          ensure_ascii=False))
 
 
+def cmd_linkedin_ingest(args, store: Store) -> None:
+    from jobhunt.models import AlertBatch
+    from jobhunt.sources import linkedin_alerts
+
+    try:
+        batch = AlertBatch.model_validate_json(Path(args.file).read_text(encoding="utf-8"))
+    except ValidationError as err:
+        print(err, file=sys.stderr)
+        sys.exit("El archivo de alertas no cumple el esquema (`jobhunt schema linkedin`).")
+    with PoliteClient() as client:
+        resolver = linkedin_alerts.BoardResolver(client, HOME, ats_boards.load_boards(FetchContext(home=HOME)))
+        try:
+            summary = linkedin_alerts.ingest(batch, store, load_prefs(), resolver)
+        except ValueError as err:
+            sys.exit(str(err))
+        resolver.save()
+    print(json.dumps(summary, ensure_ascii=False, indent=1))
+
+
+def cmd_linkedin_pending(args, store: Store) -> None:
+    rows = store.by_status("needs_text")
+    if not rows:
+        print("No hay avisos de LinkedIn esperando texto.")
+    for r in rows:
+        print(f"- {r['company']}: {r['title']} ({r['location'] or 'sin ubicación'})\n  {r['url']}\n"
+              f"  jobhunt add --paste aviso.txt --title \"{r['title']}\" --company \"{r['company']}\" "
+              f"--url {r['url']}")
+
+
 def cmd_pending(args, store: Store) -> None:
     rows = store.by_status("pending", limit=args.limit)
     print(json.dumps([
@@ -245,6 +274,11 @@ def cmd_digest(args, store: Store) -> None:
                f"{len(rows)} ({counts['apply']} aplicar, {counts['maybe']} dudosos, {counts['skip']} descartados).")
     out += ["", "## Para decidir", ""]
     out += _ranking_table(candidates) if candidates else ["Nada nuevo que valga la pena."]
+    waiting = store.by_status("needs_text")
+    if waiting:
+        out += ["", "## LinkedIn: pegá el texto", "",
+                "No están en el board de la empresa. Copiá el aviso y usá `jobhunt add --paste` (ver `jobhunt linkedin pending`).", ""]
+        out += [f"- [{r['title']}]({r['url']}) — {r['company']}" for r in waiting]
     out += ["", "## Postulaciones", "", "| Estado | Score | Puesto | Empresa | Hace | Aviso | Nota |",
             "|---|---|---|---|---|---|---|"]
     today = datetime.now().date()
@@ -257,7 +291,8 @@ def cmd_digest(args, store: Store) -> None:
 
 
 def cmd_schema(args, store: Store | None = None) -> None:
-    model = {"analysis": JobAnalysis, "cv": CvDocument, "answers": AnswerSheet}[args.which]
+    from jobhunt.models import AlertBatch
+    model = {"analysis": JobAnalysis, "cv": CvDocument, "answers": AnswerSheet, "linkedin": AlertBatch}[args.which]
     print(json.dumps(model.model_json_schema(), ensure_ascii=False, indent=1))
 
 
@@ -574,6 +609,14 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--location", help="Con --paste: ubicación o modalidad, ej. 'Argentina · remote'")
     p.set_defaults(func=cmd_add)
 
+    p = sub.add_parser("linkedin", help="Alertas de empleo de LinkedIn (leídas del email)")
+    li_sub = p.add_subparsers(dest="li_cmd", required=True)
+    li = li_sub.add_parser("ingest", help="Cargar una tanda de alertas (JSON, ver `jobhunt schema linkedin`)")
+    li.add_argument("file")
+    li.set_defaults(func=cmd_linkedin_ingest)
+    li = li_sub.add_parser("pending", help="Avisos de LinkedIn que esperan que pegues el texto")
+    li.set_defaults(func=cmd_linkedin_pending)
+
     p = sub.add_parser("pending", help="Avisos esperando análisis")
     p.add_argument("--limit", type=int)
     p.set_defaults(func=cmd_pending)
@@ -599,7 +642,7 @@ def main(argv: list[str] | None = None) -> None:
     p.set_defaults(func=cmd_digest)
 
     p = sub.add_parser("schema", help="Esquema JSON de un análisis o de un CV")
-    p.add_argument("which", nargs="?", choices=["analysis", "cv", "answers"], default="analysis")
+    p.add_argument("which", nargs="?", choices=["analysis", "cv", "answers", "linkedin"], default="analysis")
     p.set_defaults(func=cmd_schema)
 
     p = sub.add_parser("cv", help="Verificar o renderizar un CV")
