@@ -121,22 +121,30 @@ def _fetch_source(source, client: PoliteClient, store: Store, prefs: Preferences
 
 def cmd_add(args, store: Store) -> None:
     prefs = load_prefs()
+    listings = []
+    if args.paste:
+        if not (args.title and args.company):
+            sys.exit("Con --paste hacen falta --title y --company.")
+        text = Path(args.paste).read_text(encoding="utf-8")
+        listings.append(manual.from_text(text, args.title, args.company, args.url or "", args.location or ""))
+    elif not args.urls:
+        sys.exit("Pasá uno o más links, o un aviso copiado con --paste.")
     with PoliteClient() as client:
-        for url in args.urls:
+        for url in ([] if args.paste else args.urls):
             try:
-                listing = manual.fetch_listing(client, url)
+                listings.append(manual.fetch_listing(client, url))
             except Exception as err:
                 print(f"No pude leer {url}: {err}", file=sys.stderr)
-                continue
-            stub = listing.stub
-            store.upsert_stub(stub)
-            store.save_detail(stub.id, listing.detail)
-            store.commit()
-            warning = listing_filter_reason(stub.title, stub.location, prefs)
-            print(json.dumps({"id": stub.id, "title": stub.title, "company": stub.company,
-                              "status": store.get(stub.id)["status"],
-                              "warning": f"los filtros lo habrían descartado: {warning}" if warning else None},
-                             ensure_ascii=False))
+    for listing in listings:
+        stub = listing.stub
+        store.upsert_stub(stub)
+        store.save_detail(stub.id, listing.detail)
+        store.commit()
+        warning = listing_filter_reason(stub.title, stub.location, prefs)
+        print(json.dumps({"id": stub.id, "title": stub.title, "company": stub.company,
+                          "status": store.get(stub.id)["status"],
+                          "warning": f"los filtros lo habrían descartado: {warning}" if warning else None},
+                         ensure_ascii=False))
 
 
 def cmd_pending(args, store: Store) -> None:
@@ -283,7 +291,8 @@ def run_check(doc: CvDocument) -> bool:
     return report.ok
 
 
-APPLICATION_STATUSES = ["created", "tailored", "needs_changes", "ready", "submitted", "discarded"]
+APPLICATION_STATUSES = ["created", "tailored", "needs_changes", "ready", "submitted",
+                        "interviewing", "offer", "rejected", "discarded"]
 
 
 def slugify(text: str) -> str:
@@ -321,6 +330,32 @@ def cmd_app_set(args, store: Store) -> None:
     store.upsert_application(args.job_id, app["folder"], args.status, args.note)
     store.commit()
     print(f"{args.job_id}: {args.status}")
+
+
+def cmd_app_clean(args, store: Store) -> None:
+    import time
+    from datetime import date
+
+    from jobhunt import cleanup
+
+    before = args.before or date.today().isoformat()
+    actions = cleanup.plan(store.applications(), before)
+    if not actions:
+        print("Nada para limpiar.")
+    for a in actions:
+        what = "borrar carpeta y marcar descartada" if a.new_status else "borrar carpeta"
+        print(f"- {a.label} [{a.status}]: {what} ({a.reason})")
+    if not args.apply:
+        print("\nSimulación: no se borró nada. Repetí con --apply para ejecutar.")
+        return
+    root = HOME / "applications"
+    for a in actions:
+        cleanup.remove_folder(a.folder, root)
+        if a.new_status:
+            store.upsert_application(a.job_id, str(a.folder), a.new_status, f"limpiada el {date.today()}: {a.reason}")
+    store.commit()
+    pruned = cleanup.prune_runs(HOME / "runs", args.runs_older_than, time.time())
+    print(f"\nListo: {len(actions)} postulaciones limpiadas, {len(pruned)} salidas viejas de agentes borradas.")
 
 
 def cmd_app_list(args, store: Store) -> None:
@@ -530,8 +565,13 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--delay", type=float, default=1.5)
     p.set_defaults(func=cmd_fetch)
 
-    p = sub.add_parser("add", help="Sumar avisos a mano por URL (Greenhouse, Lever, Ashby o cualquier página)")
-    p.add_argument("urls", nargs="+")
+    p = sub.add_parser("add", help="Sumar avisos a mano: por URL, o pegando el texto (LinkedIn y similares)")
+    p.add_argument("urls", nargs="*")
+    p.add_argument("--paste", metavar="ARCHIVO", help="Texto del aviso copiado a mano (para LinkedIn, Indeed, etc.)")
+    p.add_argument("--title", help="Con --paste: título del puesto")
+    p.add_argument("--company", help="Con --paste: empresa")
+    p.add_argument("--url", help="Con --paste: link del aviso, para tenerlo en el paquete")
+    p.add_argument("--location", help="Con --paste: ubicación o modalidad, ej. 'Argentina · remote'")
     p.set_defaults(func=cmd_add)
 
     p = sub.add_parser("pending", help="Avisos esperando análisis")
@@ -616,6 +656,12 @@ def main(argv: list[str] | None = None) -> None:
     a = app_sub.add_parser("check", help="Verificar CV, PDF y respuestas de una postulación")
     a.add_argument("job_id")
     a.set_defaults(func=cmd_app_check)
+    a = app_sub.add_parser("clean", help="Borrar carpetas de postulaciones no enviadas o terminadas")
+    a.add_argument("--before", help="Solo lo no enviado antes de esta fecha (YYYY-MM-DD; default: hoy)")
+    a.add_argument("--runs-older-than", type=int, default=30,
+                   help="Días para borrar salidas crudas de agentes en private/runs")
+    a.add_argument("--apply", action="store_true", help="Ejecutar (sin esto, solo muestra el plan)")
+    a.set_defaults(func=cmd_app_clean)
     a = app_sub.add_parser("list", help="Postulaciones y su estado")
     a.set_defaults(func=cmd_app_list)
 

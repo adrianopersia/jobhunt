@@ -13,10 +13,12 @@ anteriores.
 
 1. `ls private/runs/ciclo-*.md`: el más reciente es el ciclo anterior y la fecha está en el
    nombre. Si no hay ninguno, es el primer ciclo y no hay fecha `--since`.
-2. `.venv/bin/jobhunt app list`. Si hay postulaciones `submitted`, preguntale al usuario en un
-   solo mensaje si hubo novedades: respuesta, entrevista o rechazo. Actualizá con
-   `.venv/bin/jobhunt app set <id> --status <estado> --note "<novedad>"`. No frenes el ciclo
-   esperando la respuesta.
+2. `.venv/bin/jobhunt app list`. En un solo mensaje, preguntale al usuario:
+   - cuáles de las `ready` envió (avisale que las que no, se borran al cerrar el ciclo);
+   - si hubo novedades en las `submitted`: respuesta, entrevista o rechazo.
+   Actualizá con `.venv/bin/jobhunt app set <id> --status <submitted|interviewing|offer|rejected>
+   --note "<novedad>"`. Seguí con el paso 1 mientras tanto; la limpieza del cierre espera la
+   respuesta.
 
 ## 1. Avisos nuevos
 
@@ -41,9 +43,14 @@ Seguí `.claude/skills/review/SKILL.md` con los mismos avisos.
 
 ## 5. Cierre
 
-1. `.venv/bin/jobhunt digest --since <fecha del ciclo anterior>` y guardalo en
+1. **Limpieza.** `.venv/bin/jobhunt app clean --before <fecha de hoy>` muestra el plan: borra las
+   carpetas de lo que no se envió en ciclos anteriores y de los procesos rechazados. Lo enviado y
+   lo que está en entrevista se conserva, y también todo lo de este ciclo. Ejecutalo con `--apply`
+   solo si el usuario ya contestó cuáles envió. Si no contestó, mostrale el plan y dejalo para el
+   próximo ciclo.
+2. `.venv/bin/jobhunt digest --since <fecha del ciclo anterior>` y guardalo en
    `private/runs/ciclo-<fecha de hoy>.md`.
-2. Mostrale al usuario:
+3. Mostrale al usuario:
    - los paquetes listos, con la ruta de cada `review.md`;
    - lo que tiene que decidir en cada uno, con el salario recomendado;
    - las postulaciones cuyo aviso se cerró;

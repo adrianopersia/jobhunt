@@ -115,7 +115,7 @@ This repo is public. My real data is not.
 | [Himalayas](https://himalayas.app) | Public jobs API | Remote roles with structured country restrictions and salary |
 | [Jobicy](https://jobicy.com) | Public API, filtered to Argentina server-side | Small 7-day window; one pull per run |
 | [We Work Remotely](https://weworkremotely.com) | RSS feeds | Region field is unreliable, so the country list is checked too |
-| Manual | `jobhunt add <url>` | For postings found elsewhere, LinkedIn included: paste the link, ideally the company's ATS page |
+| Manual | `jobhunt add <url>` or `jobhunt add --paste <file>` | For postings found elsewhere. LinkedIn, Indeed and Glassdoor links are never fetched (their robots.txt disallows it): paste the posting text, or the company's ATS link if it says "Apply on company website" |
 
 Left out on purpose: Remotive (its robots.txt disallows `/api/*`) and RemoteOK (no structured
 location, and encoding issues in the payload). Every posting links back to the board it came
@@ -142,6 +142,11 @@ verdicts: the aggregator said "remote", but the real posting said hybrid.
 lets me pick (all "apply" by default, max 5), tailors, reviews, and writes a cycle digest with the
 ready packages and what's left for me to decide. Postings that disappear from a source are marked
 closed, and come back if they're republished.
+
+At the end of a cycle, `jobhunt app clean` removes the folders of packages that were never sent
+and of rejected processes. Submitted applications are kept, because when a company calls back you
+need to know which CV and answers it got. The database keeps every record, so removed postings
+don't come back as new.
 
 ## Layout
 
