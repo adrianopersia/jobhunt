@@ -33,3 +33,31 @@ def test_aviso_pegado_a_mano():
     assert listing.detail.apply_url.endswith("/view/1/")
     again = from_text("otro texto", "AI Engineer", "Acme", url="https://www.linkedin.com/jobs/view/1/")
     assert again.stub.id == listing.stub.id  # mismo link, mismo aviso
+
+
+def test_aviso_de_workable_por_su_api_publica():
+    job = {"title": "Full-Stack Developer", "remote": True, "workplace": "remote", "type": "full",
+           "published": "2026-01-10T00:00:00.000Z",
+           "description": "<p>Build web products.</p>", "requirements": "<ul><li>3+ years of React</li></ul>",
+           "benefits": "<p>Remote</p>",
+           "locations": [{"city": "Tbilisi", "country": "Georgia", "hidden": False},
+                         {"city": "", "country": "Argentina", "hidden": False},
+                         {"city": "", "country": "Oculto", "hidden": True}]}
+
+    class Fake:
+        def __init__(self):
+            self.urls = []
+
+        def get_json(self, url):
+            self.urls.append(url)
+            return {"name": "Acme Apps"} if url.endswith("/accounts/acmeapps") else job
+
+    client = Fake()
+    listing = fetch_listing(client, "https://apply.workable.com/acmeapps/j/AB12CD34EF/?utm_source=x")
+    assert client.urls == ["https://apply.workable.com/api/v2/accounts/acmeapps/jobs/AB12CD34EF",
+                           "https://apply.workable.com/api/v1/accounts/acmeapps"]
+    assert (listing.stub.company, listing.stub.title) == ("Acme Apps", "Full-Stack Developer")
+    assert listing.stub.location == "Tbilisi, Georgia / Argentina · remote"
+    assert listing.detail.location_requirements == ["Georgia", "Argentina"]
+    assert "3+ years of React" in listing.detail.description and "Requirements" in listing.detail.description
+    assert listing.detail.apply_url == "https://apply.workable.com/acmeapps/j/AB12CD34EF/"

@@ -88,8 +88,8 @@ class Store:
         """Devuelve True si el aviso es nuevo."""
         ts = now()
         cur = self.db.execute(
-            "UPDATE jobs SET last_seen = ?, title = ?, location = ? WHERE id = ?",
-            (ts, stub.title, stub.location, stub.id),
+            "UPDATE jobs SET last_seen = ?, title = ?, company = ?, location = ?, norm_key = ? WHERE id = ?",
+            (ts, stub.title, stub.company, stub.location, norm_key(stub.company, stub.title), stub.id),
         )
         if cur.rowcount:
             # Si había desaparecido y vuelve a estar publicado, recupera su estado.
@@ -183,6 +183,18 @@ class Store:
              json.dumps(decision.reasons, ensure_ascii=False), rubric_version, now()),
         )
         self.set_status(job_id, "analyzed")
+
+    def update_decision(self, job_id: str, decision: Decision) -> None:
+        """Para recalcular con preferencias nuevas sin volver a pasar el aviso por el LLM."""
+        self.db.execute(
+            "UPDATE analyses SET decision = ?, decision_reasons = ? WHERE job_id = ?",
+            (decision.decision, json.dumps(decision.reasons, ensure_ascii=False), job_id),
+        )
+
+    def analyses(self) -> list[sqlite3.Row]:
+        return self.db.execute(
+            "SELECT a.*, j.title, j.company FROM analyses a JOIN jobs j ON j.id = a.job_id"
+        ).fetchall()
 
     def ranked(self, include_gone: bool = False, since: str | None = None) -> list[sqlite3.Row]:
         where = ["1 = 1"]

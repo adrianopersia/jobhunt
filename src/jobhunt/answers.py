@@ -77,6 +77,8 @@ def check_answers(form: ApplicationForm, sheet: AnswerSheet, profile: dict) -> l
             errors.append(f"{where}: es obligatorio y quedó como opcional")
         if answer.action == "attach_cv" and field.type != "file":
             errors.append(f"{where}: attach_cv en un campo que no es de archivo")
+        if field.hidden_text and answer.action == "answer":
+            errors.append(f"{where}: tiene texto oculto (posible trampa anti-IA); lo responde el candidato")
         if answer.action != "answer":
             continue
 

@@ -1,7 +1,8 @@
 """Avisos que el candidato encuentra por su cuenta (LinkedIn, un referido, un tuit).
 
 Si el link es de Greenhouse, Lever o Ashby, se lee por su API pública y queda con el mismo ID
-que tendría desde el board de la empresa. Cualquier otro link se lee como HTML.
+que tendría desde el board de la empresa. Workable arma la página en el navegador, así que también
+se lee por su API pública. Cualquier otro link se lee como HTML.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ from jobhunt.ats import clean_url, html_to_text
 from jobhunt.http import PoliteClient
 from jobhunt.models import JobDetail, JobStub
 from jobhunt.sources import ats_boards
-from jobhunt.sources.base import Listing
+from jobhunt.sources.base import Listing, html_text
 
 SOURCE = "manual"
 
@@ -48,6 +49,25 @@ def from_text(text: str, title: str, company: str, url: str = "", location: str 
     return Listing(stub, JobDetail(description=text.strip(), apply_url=url, location_raw=location or None))
 
 
+def parse_workable(job: dict, company: str, url: str) -> Listing:
+    countries = [loc["country"] for loc in job.get("locations") or [] if not loc.get("hidden") and loc.get("country")]
+    places = [", ".join(p for p in (loc.get("city"), loc.get("country")) if p)
+              for loc in job.get("locations") or [] if not loc.get("hidden")]
+    location = " / ".join(dict.fromkeys(p for p in places if p))
+    if job.get("remote") or job.get("workplace") == "remote":
+        location = f"{location} · remote" if location else "remote"
+    sections = [("", job.get("description")), ("Requirements", job.get("requirements")),
+                ("Benefits", job.get("benefits"))]
+    description = "\n\n".join(f"{title}\n{html_text(body)}" if title else html_text(body)
+                               for title, body in sections if body)
+    stub = JobStub(source=SOURCE, external_id=hashlib.sha1(url.encode()).hexdigest()[:12],
+                   url=url, title=job.get("title", ""), company=company, location=location)
+    return Listing(stub, JobDetail(
+        description=description, apply_url=url, posted_at=job.get("published"),
+        employment_type=job.get("type"), modality_raw=job.get("workplace"), location_raw=location,
+        location_requirements=list(dict.fromkeys(countries))))
+
+
 def fetch_listing(client: PoliteClient, url: str) -> Listing:
     if no_fetch(url):
         raise PermissionError(
@@ -70,6 +90,11 @@ def fetch_listing(client: PoliteClient, url: str) -> Listing:
             if listing.stub.external_id.endswith(job):
                 return listing
         raise ValueError("El aviso no está publicado en el board de Ashby.")
+    if m := re.search(r"apply\.workable\.com/([^/]+)/j/([0-9A-Za-z]+)", url):
+        slug, code = m.groups()
+        job = client.get_json(f"https://apply.workable.com/api/v2/accounts/{slug}/jobs/{code}")
+        account = client.get_json(f"https://apply.workable.com/api/v1/accounts/{slug}")
+        return parse_workable(job, account.get("name") or slug, url)
 
     page = client.get_text(url)
     soup = BeautifulSoup(page, "html.parser")

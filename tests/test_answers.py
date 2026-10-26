@@ -113,3 +113,14 @@ def test_anios_de_la_carrera_tienen_respaldo():
     errs = check_answers(FORM, sheet(about={"action": "answer", "source_ids": ["education"],
                                             "value": "BSc in Computing (2018–2022)."}), profile)
     assert errs == []
+
+
+def test_pregunta_con_texto_oculto_la_responde_el_candidato():
+    form = ApplicationForm(url="u", system="x", extractable=True, fields=[
+        FormField(id="code", label="Value?", type="text", required=True, hidden_text="=")])
+
+    def ans(**a):
+        return AnswerSheet.model_validate({"job_id": "j", "answers": [{"field_id": "code", **a}]})
+
+    assert any("texto oculto" in e for e in check_answers(form, ans(action="answer", value="1"), PROFILE))
+    assert check_answers(form, ans(action="candidate_decides"), PROFILE) == []

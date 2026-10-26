@@ -16,6 +16,8 @@ salary_reference:
   foreign: {min: 2500, max: 4000, source: "guía de salarios remotos, 2026"}
 
 max_years_required: 5
+# Senior solo si pide hasta estos años; un senior que no dice cuántos se descarta.
+max_years_required_senior: 3
 excluded_role_families: [ml_research, ml_engineer, data, non_engineering]
 apply_threshold: 70
 maybe_threshold: 50

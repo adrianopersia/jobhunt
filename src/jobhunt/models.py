@@ -149,6 +149,9 @@ class Preferences(BaseModel):
     )
     salary_reference: SalaryReference = SalaryReference()
     max_years_required: int = 5
+    max_years_required_senior: int | None = Field(
+        default=None, description="Techo de años para avisos senior o más; un senior que no dice "
+                                  "cuántos años pide también se descarta. None: sin regla aparte")
     excluded_role_families: list[RoleFamily] = []
     apply_threshold: int = 70
     maybe_threshold: int = 50
