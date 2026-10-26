@@ -134,14 +134,14 @@ def ingest(batch, store, prefs, resolver) -> dict:
             summary["already_known"] += 1
             continue
         store.upsert_stub(stub)
-        if listing_filter_reason(job.title, job.location, prefs):
+        if listing_filter_reason(job.title, job.location, prefs, job.company):
             store.set_status(stub.id, "filtered")
             summary["filtered"] += 1
             continue
         listing = resolver.resolve(job)
         if listing:
             store.upsert_stub(listing.stub)
-            if listing_filter_reason(listing.stub.title, listing.stub.location, prefs):
+            if listing_filter_reason(listing.stub.title, listing.stub.location, prefs, listing.stub.company):
                 store.set_status(listing.stub.id, "filtered")
                 store.set_status(stub.id, "filtered")
                 summary["filtered"] += 1

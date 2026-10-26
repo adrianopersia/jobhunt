@@ -82,3 +82,34 @@ def test_nivel_de_idioma_del_perfil_no_es_numero_inventado():
     errs = check_answers(FORM, sheet(about={"action": "answer", "value": "My English level is B2.",
                                             "source_ids": ["f-years"]}), PROFILE)
     assert errs == []
+
+
+def test_texto_fuera_del_largo_permitido():
+    form = ApplicationForm(url="u", system="x", extractable=True, fields=[
+        FormField(id="why", label="Why us?", type="textarea", required=True, min_length=50, max_length=80)])
+    short = AnswerSheet.model_validate({"job_id": "j", "answers": [
+        {"field_id": "why", "action": "answer", "value": "Node.js.", "source_ids": ["acme-x"]}]})
+    long = AnswerSheet.model_validate({"job_id": "j", "answers": [
+        {"field_id": "why", "action": "answer", "value": "Node.js " * 20, "source_ids": ["acme-x"]}]})
+    assert check_answers(form, short, PROFILE) == ["'Why us?': tiene 8 caracteres y el mínimo es 50"]
+    assert check_answers(form, long, PROFILE) == ["'Why us?': tiene 159 caracteres y el máximo es 80"]
+
+
+def test_telefono_se_compara_por_digitos():
+    form = ApplicationForm(url="u", system="x", extractable=True, fields=[
+        FormField(id="tel", label="Teléfono", type="phone", required=False)])
+
+    def tel(value):
+        return AnswerSheet.model_validate({"job_id": "j", "answers": [
+            {"field_id": "tel", "action": "answer", "value": value}]})
+
+    assert check_answers(form, tel("+5493410000000"), PROFILE) == []
+    assert any("teléfono" in e for e in check_answers(form, tel("+5493410000001"), PROFILE))
+
+
+def test_anios_de_la_carrera_tienen_respaldo():
+    profile = {**PROFILE, "education": [{"degree": {"en": "BSc in Computing", "es": "Lic. en Informática"},
+                                         "school": "Universidad Ejemplo", "years": "2018 - 2022"}]}
+    errs = check_answers(FORM, sheet(about={"action": "answer", "source_ids": ["education"],
+                                            "value": "BSc in Computing (2018–2022)."}), profile)
+    assert errs == []

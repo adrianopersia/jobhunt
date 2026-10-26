@@ -22,6 +22,8 @@ maybe_threshold: 50
 
 remote_region_ok: ['argentin', '\b(latam|latin america|worldwide|anywhere)\b']
 remote_region_block: ['\b(united states|usa|canada|europe|uk|india)\b']
+# Empresas que se descartan sin analizar (ej. publican remoto mundial pero contratan en un solo país).
+excluded_companies: ['^Acme Outsourcing\b']
 priority_title: ['\b(ai|llm)\b', 'agent']
 max_new_per_source: 40
 

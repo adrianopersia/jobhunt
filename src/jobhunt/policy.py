@@ -43,9 +43,15 @@ _ON_SITE_RE = re.compile(r"hybrid|h[ií]brido|onsite|on-site|presencial", re.IGN
 _REMOTE_RE = re.compile(r"remot", re.IGNORECASE)
 
 
-def listing_filter_reason(title: str, location: str, prefs: Preferences) -> str | None:
+def company_excluded(company: str, prefs: Preferences) -> bool:
+    return any(re.search(p, company, re.IGNORECASE) for p in prefs.excluded_companies)
+
+
+def listing_filter_reason(title: str, location: str, prefs: Preferences, company: str = "") -> str | None:
     """Motivo para descartar un aviso solo con lo que muestra el listado, o None si pasa.
     Es barato y conservador: ante la duda deja pasar y decide el análisis completo."""
+    if company_excluded(company, prefs):
+        return "empresa excluida"
     if any(re.search(p, title, re.IGNORECASE) for p in prefs.title_exclude):
         return "título excluido"
     if not any(re.search(p, title, re.IGNORECASE) for p in prefs.title_include):

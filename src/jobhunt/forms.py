@@ -32,6 +32,8 @@ class FormField(BaseModel):
     required: bool
     options: list[str] = []
     help: str = ""
+    min_length: int | None = None
+    max_length: int | None = None
 
 
 class ApplicationForm(BaseModel):
@@ -229,13 +231,37 @@ def outbound_apply_link(html: str, host: str) -> str | None:
     return None
 
 
+def getonbrd_form(url: str) -> ApplicationForm:
+    """El formulario está detrás del login y la API no lo expone, pero la base es la misma en
+    todos los avisos. Experiencia y educación quedan guardadas en el perfil de Get on Board."""
+    return ApplicationForm(url=url, system="getonbrd", extractable=True, fields=[
+        FormField(id="experience", label="Tell us about your experience.", type="textarea",
+                  required=True, min_length=300, max_length=2000,
+                  help="Get on Board lo guarda en tu perfil para próximas postulaciones."),
+        FormField(id="education", label="Tell us about your education and academic background.",
+                  type="textarea", required=True,
+                  help="Mention formal studies, courses and self-learning efforts relevant to this position."),
+        FormField(id="location", label="¿Dónde vives?", type="single_select", required=True),
+        FormField(id="cv", label="Selecciona tu CV", type="file", required=False),
+        FormField(id="linkedin", label="URL de tu perfil LinkedIn", type="link", required=False),
+        FormField(id="phone", label="Número de teléfono móvil", type="phone", required=False,
+                  help="Solo números y signo + para el código de país (sin paréntesis, guiones ni espacios)."),
+        FormField(id="salary", label="¿Cuál es tu expectativa de sueldo bruto para este empleo?",
+                  type="number", required=True, help="Dólares (USD) brutos al mes."),
+        FormField(id="why_company", label="¿Por qué te interesa trabajar en la empresa?",
+                  type="textarea", required=True, min_length=50, max_length=1000,
+                  help="Qué te interesó de la empresa y por qué deberían contratarte."),
+    ], notes=[
+        "Formulario base de Get on Board: se postula con tu cuenta, en tres pasos (Experiencia, "
+        "Información básica, Vista previa). El aviso puede sumar preguntas propias que no se ven "
+        "desde afuera: revisalas en el sitio antes de enviar."])
+
+
 def fetch_form(client: PoliteClient, apply_url: str, _depth: int = 0) -> ApplicationForm:
     url = clean_url(apply_url)
     host = urlparse(url).netloc
     if host.endswith("getonbrd.com"):
-        return ApplicationForm(url=url, system="getonbrd", extractable=False, notes=[
-            "La postulación se hace dentro de Get on Board, con tu cuenta: completás el perfil "
-            "de Get on Board y las preguntas del aviso ahí."])
+        return getonbrd_form(url)
     if any(host.endswith(a) for a in AGGREGATORS) and _depth == 0:
         target = outbound_apply_link(client.get_text(url), host)
         if target:

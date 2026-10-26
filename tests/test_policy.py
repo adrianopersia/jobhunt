@@ -1,7 +1,7 @@
 import pytest
 
 from jobhunt.models import JobAnalysis, Preferences
-from jobhunt.policy import decide, detect_ats, listing_filter_reason, monthly_usd, too_old
+from jobhunt.policy import company_excluded, decide, detect_ats, listing_filter_reason, monthly_usd, too_old
 
 
 @pytest.fixture
@@ -14,6 +14,7 @@ def prefs():
         excluded_role_families=["ml_research"],
         title_include=[r"\b(ai|llm)\b", "full[- ]?stack", "member of technical staff"],
         title_exclude=[r"(?<!technical )\bstaff\b", "manager"],
+        excluded_companies=[r"^Acme Outsourcing\b"],
     )
 
 
@@ -40,6 +41,12 @@ def analysis(**overrides):
 ])
 def test_filtro_de_listado(prefs, title, location, expected):
     assert listing_filter_reason(title, location, prefs) == expected
+
+
+def test_empresa_excluida_se_descarta_sin_analizar(prefs):
+    assert listing_filter_reason("AI Engineer", "Worldwide · remote", prefs, "Acme Outsourcing") == "empresa excluida"
+    assert listing_filter_reason("AI Engineer", "Worldwide · remote", prefs, "Acme Labs") is None
+    assert company_excluded("acme outsourcing inc.", prefs)
 
 
 @pytest.mark.parametrize("url,ats", [
