@@ -11,6 +11,7 @@ def prefs():
         salary_floor_usd_month=1500,
         fx_to_usd={"ARS": 1000},
         max_years_required=5,
+        max_years_required_senior=3,
         excluded_role_families=["ml_research"],
         title_include=[r"\b(ai|llm)\b", "full[- ]?stack", "member of technical staff"],
         title_exclude=[r"(?<!technical )\bstaff\b", "manager"],
@@ -111,3 +112,21 @@ def test_avisos_viejos(prefs):
     assert not too_old("2026-10-01T00:00:00Z", prefs, today)
     assert not too_old(None, prefs, today)
     assert not too_old("2026-09-01", prefs, today)  # sin zona horaria, 44 días
+
+
+@pytest.mark.parametrize("seniority,years,expected", [
+    ("senior", 3, "apply"),           # senior que pide poco: pasa
+    ("senior", 4, "skip"),
+    ("senior", None, "skip"),         # senior sin años pedidos: suele ser 4+
+    ("staff_plus", None, "skip"),
+    ("semi_senior", 5, "apply"),      # el techo general es aparte
+    ("semi_senior", None, "apply"),
+    ("unspecified", None, "apply"),
+])
+def test_techo_de_anios_para_senior(prefs, seniority, years, expected):
+    assert decide(analysis(seniority=seniority, years_required_min=years), prefs).decision == expected
+
+
+def test_senior_por_encima_del_techo_general_da_un_solo_motivo(prefs):
+    reasons = decide(analysis(seniority="senior", years_required_min=6), prefs).reasons
+    assert reasons == ["pide 6+ años"]

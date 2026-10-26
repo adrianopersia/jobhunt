@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
-from jobhunt.models import JobAnalysis, Modality, Preferences
+from jobhunt.models import JobAnalysis, Modality, Preferences, Seniority
 
 _ATS_HOSTS = {
     "jobs.lever.co": "lever",
@@ -136,11 +136,15 @@ def decide(analysis: JobAnalysis, prefs: Preferences) -> Decision:
     else:
         notes.append("modalidad no especificada")
 
-    if (
-        analysis.years_required_min is not None
-        and analysis.years_required_min > prefs.max_years_required
-    ):
-        hard.append(f"pide {analysis.years_required_min}+ años")
+    years = analysis.years_required_min
+    senior = analysis.seniority in (Seniority.SENIOR, Seniority.STAFF_PLUS)
+    if years is not None and years > prefs.max_years_required:
+        hard.append(f"pide {years}+ años")
+    elif senior and prefs.max_years_required_senior is not None:
+        if years is None:
+            hard.append("senior sin años pedidos (suele ser 4+)")
+        elif years > prefs.max_years_required_senior:
+            hard.append(f"senior que pide {years}+ años")
 
     if prefs.salary_floor_usd_month is not None and analysis.salary:
         usd = monthly_usd(analysis, prefs)

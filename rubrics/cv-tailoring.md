@@ -10,6 +10,9 @@ Un CV que pasa el filtro con una afirmación falsa se cae en la entrevista y que
 
 - Solo items del perfil con `use: cv`. Se puede reformular, acortar, fusionar dos items y
   reordenar. No se pueden agregar hechos, números, tecnologías, títulos ni empleadores.
+- Tampoco calificadores de alcance que la fuente no dice ("the product's", "all", "company-wide",
+  "the team's"), aunque parezcan obvios: el revisor los marca como `agrega`. Si dos fuentes cuentan
+  conjuntos distintos (repos, servicios, equipos), cada bullet usa el número y el alcance de la suya.
 - Cada bullet y el resumen citan en `source_ids` los items de donde salen. Si un bullet fusiona
   dos items, cita los dos.
 - `jobhunt cv render` corre el verificador de anclaje y se niega a generar el PDF si falla. No

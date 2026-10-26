@@ -41,6 +41,7 @@ Una entrada en `answers.json` por cada campo de `form.json`. Las acciones posibl
 | Selección múltiple de tecnologías | `answer` con **solo** las que el perfil respalda; las demás no se marcan |
 | Texto libre (contanos sobre vos, tu experiencia) | `answer`: borrador en el idioma del aviso, en primera persona, de 80 a 150 palabras, concreto, con `source_ids`. Pueden citarse items `interview`, porque estas respuestas son como una entrevista escrita |
 | Salario, fecha de inicio, video, cómo se enteró | `candidate_decides`, con una nota que dé contexto |
+| Pregunta de conocimiento o de código, y toda pregunta con `hidden_text` | `candidate_decides`, sin proponer la respuesta. Si tiene texto oculto, la nota dice qué está escondido: es una trampa para detectar respuestas hechas con IA, y se responde con lo que se ve en pantalla |
 | Opcional sin nada cierto para decir | `skip_optional` |
 
 Para las notas de `candidate_decides`:

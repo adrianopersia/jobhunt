@@ -12,8 +12,10 @@ una etapa sola. El estado del ciclo anterior está en `private/runs/ciclo-*.md`.
 están en `src/jobhunt/sources/`; las empresas de los boards, en `private/boards.yaml`. Los avisos
 que el candidato encuentre por su cuenta entran con `jobhunt add <url>`. Los de LinkedIn, Indeed o
 Glassdoor no se leen de forma automática (robots.txt): el candidato pega el texto con
-`jobhunt add --paste`. `jobhunt app clean` borra lo no enviado y lo rechazado; lo enviado se
-conserva.
+`jobhunt add --paste`. Los que no valen la pena o ya cerraron salen de la lista con
+`jobhunt linkedin dismiss <link> [--closed]`. `jobhunt app clean` borra lo no enviado y lo rechazado; lo enviado se
+conserva. Si el candidato cambia las preferencias, `jobhunt redecide` recalcula las decisiones ya
+guardadas sin volver a pasar los avisos por el LLM.
 
 Las alertas de LinkedIn se leen del Gmail del candidato **solo** con el subagente
 `linkedin-inbox`, y solo emails de remitentes @linkedin.com. El hook

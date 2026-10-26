@@ -34,6 +34,7 @@ class FormField(BaseModel):
     help: str = ""
     min_length: int | None = None
     max_length: int | None = None
+    hidden_text: str = ""  # texto que la página esconde a la vista (ver visible_text)
 
 
 class ApplicationForm(BaseModel):
@@ -42,6 +43,29 @@ class ApplicationForm(BaseModel):
     extractable: bool
     fields: list[FormField] = []
     notes: list[str] = []
+
+
+# Texto escondido a la vista pero presente en el HTML: algunas empresas lo usan como trampa para
+# detectar respuestas hechas con IA (quien copia la pregunta a un modelo le pasa otra pregunta).
+_HIDDEN_STYLE = re.compile(r"font-size:\s*0(?![.\d])|display:\s*none|visibility:\s*hidden|opacity:\s*0(?![.\d])",
+                           re.IGNORECASE)
+
+
+def visible_text(html: str) -> tuple[str, str]:
+    """(lo que ve una persona, lo escondido)."""
+    soup = BeautifulSoup(html or "", "html.parser")
+    hidden = [t for t in soup.find_all(True) if _HIDDEN_STYLE.search(t.get("style") or "") or t.has_attr("hidden")]
+    outer = [t for t in hidden if not any(p in hidden for p in t.parents)]
+    texts = [t.get_text(" ", strip=True) for t in outer]
+    for t in outer:
+        t.extract()
+    return soup.get_text(" ", strip=True), " ".join(x for x in texts if x)
+
+
+def hidden_text_notes(fields: list[FormField]) -> list[str]:
+    return [f"{f.label!r}: la pregunta tiene texto oculto ({f.hidden_text!r}), una trampa común para detectar "
+            "respuestas hechas con IA. La responde el candidato, con lo que ve en pantalla."
+            for f in fields if f.hidden_text]
 
 
 # ---------- Greenhouse: API pública del board ----------
@@ -65,13 +89,14 @@ def parse_greenhouse(data: dict, url: str) -> ApplicationForm:
             kind = "email"
         elif kind == "text" and "phone" in label.lower():
             kind = "phone"
+        help_, hidden = visible_text(q.get("description") or "")
         fields.append(FormField(
             id=first.get("name") or f"q{n}", label=label, type=kind,
             required=bool(q.get("required")),
             options=[v["label"] for v in first.get("values", [])],
-            help=BeautifulSoup(q.get("description") or "", "html.parser").get_text(" ", strip=True),
+            help=help_, hidden_text=hidden,
         ))
-    notes = []
+    notes = hidden_text_notes(fields)
     if data.get("demographic_questions"):
         notes.append("Tiene preguntas demográficas voluntarias: las responde el candidato si quiere.")
     if data.get("include_ai_disclaimer"):
@@ -231,6 +256,36 @@ def outbound_apply_link(html: str, host: str) -> str | None:
     return None
 
 
+# ---------- Workable: API pública del formulario ----------
+
+_WK_TYPES = {"text": "text", "email": "email", "phone": "phone", "file": "file", "number": "number",
+             "paragraph": "textarea", "date": "date", "boolean": "single_select", "group": "other"}
+
+
+def parse_workable(data: list[dict], url: str) -> ApplicationForm:
+    """El valor que Workable precarga (la ciudad adivinada por IP) no se guarda."""
+    fields = []
+    for section in data:
+        for f in section.get("fields", []):
+            kind = f.get("type", "")
+            if kind == "dropdown":
+                ftype = "single_select" if f.get("singleOption", True) else "multi_select"
+            else:
+                ftype = _WK_TYPES.get(kind, "other")
+            options = [o.get("value", "") for o in f.get("options", [])]
+            if kind == "boolean":
+                options = ["Yes", "No"]
+            help_ = f.get("helper") or ""
+            if kind == "group":
+                help_ = "Sección repetible con: " + ", ".join(sub.get("id", "") for sub in f.get("fields", []))
+            fields.append(FormField(
+                id=f["id"], label=(f.get("label") or f["id"]).strip(), type=ftype,
+                required=bool(f.get("required")), options=options, help=help_,
+                max_length=f.get("maxLength") if ftype in ("text", "textarea") else None))
+    return ApplicationForm(url=url, system="workable", extractable=bool(fields), fields=fields,
+                           notes=["Workable: formulario leído de su API pública."])
+
+
 def getonbrd_form(url: str) -> ApplicationForm:
     """El formulario está detrás del login y la API no lo expone, pero la base es la misma en
     todos los avisos. Experiencia y educación quedan guardadas en el perfil de Get on Board."""
@@ -262,6 +317,8 @@ def fetch_form(client: PoliteClient, apply_url: str, _depth: int = 0) -> Applica
     host = urlparse(url).netloc
     if host.endswith("getonbrd.com"):
         return getonbrd_form(url)
+    if host == "apply.workable.com" and (m := re.search(r"/j/([0-9A-Za-z]+)", url)):
+        return parse_workable(client.get_json(f"https://apply.workable.com/api/v1/jobs/{m.group(1)}/form"), url)
     if any(host.endswith(a) for a in AGGREGATORS) and _depth == 0:
         target = outbound_apply_link(client.get_text(url), host)
         if target:

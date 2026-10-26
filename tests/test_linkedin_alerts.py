@@ -82,3 +82,23 @@ def test_solo_acepta_alertas_de_linkedin(tmp_path):
     store = Store(tmp_path / "db.sqlite")
     with pytest.raises(ValueError):
         li.ingest(batch(sender="otro@ejemplo.com"), store, PREFS, li.BoardResolver(FakeClient(), tmp_path, []))
+
+
+def test_descartar_avisos_que_esperan_texto(tmp_path, capsys):
+    from argparse import Namespace
+
+    from jobhunt.cli import cmd_linkedin_dismiss
+    from jobhunt.models import JobStub
+    from jobhunt.store import Store
+
+    store = Store(tmp_path / "db.sqlite")
+    for n in ("111111", "222222", "333333"):
+        store.upsert_stub(JobStub(source="linkedin", external_id=n, url=f"https://www.linkedin.com/jobs/view/{n}/",
+                                  title="Dev", company="Acme"))
+        store.set_status(f"linkedin:{n}", "needs_text")
+    cmd_linkedin_dismiss(Namespace(refs=["https://www.linkedin.com/jobs/view/111111/?trk=x"], closed=True), store)
+    cmd_linkedin_dismiss(Namespace(refs=["linkedin:222222", "linkedin:999999"], closed=False), store)
+
+    assert [store.get(f"linkedin:{n}")["status"] for n in ("111111", "222222", "333333")] == [
+        "gone", "filtered", "needs_text"]
+    assert "999999" in capsys.readouterr().out

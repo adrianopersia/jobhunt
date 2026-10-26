@@ -176,6 +176,23 @@ def cmd_linkedin_pending(args, store: Store) -> None:
               f"--url {r['url']}")
 
 
+def cmd_linkedin_dismiss(args, store: Store) -> None:
+    """Saca avisos de la lista de LinkedIn pendientes: cerrados (ya no reciben postulaciones) o
+    descartados por el candidato sin pegar el texto."""
+    from jobhunt.sources import linkedin_alerts
+
+    status = "gone" if args.closed else "filtered"
+    for ref in args.refs:
+        job_id = ref if ref.startswith(f"{linkedin_alerts.SOURCE}:") else f"{linkedin_alerts.SOURCE}:{linkedin_alerts.job_id(ref)}"
+        row = store.get(job_id)
+        if not row or row["status"] != "needs_text":
+            print(f"- {ref}: no está esperando texto, no se toca")
+            continue
+        store.set_status(job_id, status)
+        print(f"- {row['company']}: {row['title']} → {'cerrado' if args.closed else 'descartado'}")
+    store.commit()
+
+
 def cmd_pending(args, store: Store) -> None:
     rows = store.by_status("pending", limit=args.limit)
     print(json.dumps([
@@ -251,6 +268,28 @@ def _ranking_table(rows) -> list[str]:
             f"| {i} | {r['decision']} | {r['fit_score']} | [{r['title']}]({r['url']}) | {r['company']} "
             f"| {a['role_family']} | {a['seniority']} | {r['ats']} | {r['app_status'] or '—'} | {reasons} |")
     return lines
+
+
+def cmd_redecide(args, store: Store) -> None:
+    """Las decisiones dependen de las preferencias: si cambian, se recalculan sin volver al LLM."""
+    prefs = load_prefs()
+    changes, invalid = [], 0
+    for row in store.analyses():
+        try:
+            analysis = JobAnalysis.model_validate_json(row["analysis"])
+        except ValueError:
+            invalid += 1  # análisis de una versión vieja del esquema: queda como estaba
+            continue
+        decision = decide(analysis, prefs)
+        if [decision.decision, decision.reasons] != [row["decision"], json.loads(row["decision_reasons"] or "[]")]:
+            store.update_decision(row["job_id"], decision)
+            if decision.decision != row["decision"]:
+                changes.append((row, decision))
+    store.commit()
+    for row, decision in changes:
+        print(f"- {row['company']}: {row['title']}: {row['decision']} → {decision.decision}"
+              f" ({'; '.join(decision.reasons) or 'sin motivos'})")
+    print(f"{len(changes)} decisiones cambiaron" + (f"; {invalid} análisis con esquema viejo, sin tocar" if invalid else "") + ".")
 
 
 def _ranked(store: Store, **kwargs) -> list:
@@ -629,6 +668,10 @@ def main(argv: list[str] | None = None) -> None:
     li.set_defaults(func=cmd_linkedin_ingest)
     li = li_sub.add_parser("pending", help="Avisos de LinkedIn que esperan que pegues el texto")
     li.set_defaults(func=cmd_linkedin_pending)
+    li = li_sub.add_parser("dismiss", help="Sacar avisos de la lista de pendientes (link o ID de LinkedIn)")
+    li.add_argument("refs", nargs="+")
+    li.add_argument("--closed", action="store_true", help="El aviso ya no recibe postulaciones")
+    li.set_defaults(func=cmd_linkedin_dismiss)
 
     p = sub.add_parser("pending", help="Avisos esperando análisis")
     p.add_argument("--limit", type=int)
@@ -650,6 +693,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--all", action="store_true", help="Incluir avisos cerrados")
     p.set_defaults(func=cmd_report)
 
+    p = sub.add_parser("redecide", help="Recalcular las decisiones con las preferencias actuales (sin LLM)")
+    p.set_defaults(func=cmd_redecide)
     p = sub.add_parser("digest", help="Resumen del ciclo: avisos nuevos y estado de las postulaciones")
     p.add_argument("--since", help="Fecha del ciclo anterior (YYYY-MM-DD)")
     p.set_defaults(func=cmd_digest)
