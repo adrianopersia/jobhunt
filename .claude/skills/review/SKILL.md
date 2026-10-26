@@ -10,7 +10,8 @@ Tercer paso del pipeline: CV adaptado → auditoría y formulario → paquete li
 ## Pasos
 
 1. **Elegir postulaciones.** Las que el usuario nombró, o todas las que figuran como `tailored`
-   en `.venv/bin/jobhunt app list`.
+   en `.venv/bin/jobhunt app list`. Si el usuario pasó el link del formulario real de una
+   postulación (porque el del aviso no se pudo leer), pasáselo al revisor junto con el ID.
 2. **Revisar en paralelo.** Un subagente `application-reviewer` por postulación, todos en el
    mismo mensaje. A cada uno pasale solo el ID del aviso.
 3. **Corregir lo que haga falta.** Por cada postulación en `needs_changes` por el CV, lanzá

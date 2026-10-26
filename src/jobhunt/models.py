@@ -162,6 +162,9 @@ class Preferences(BaseModel):
         default=[], description="Regex: regiones aceptables para un remoto (ej. latam, worldwide)")
     remote_region_block: list[str] = Field(
         default=[], description="Regex: si la ubicación nombra una región así y ninguna aceptable, se descarta")
+    excluded_companies: list[str] = Field(
+        default=[], description="Regex: empresas que se descartan sin analizar y no salen en el ranking "
+                                "(ej. publican como remoto mundial pero contratan en un solo país)")
     max_posting_age_days: int | None = Field(
         default=60, description="Avisos publicados hace más de esto se descartan sin analizar")
     max_new_per_source: int = Field(

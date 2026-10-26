@@ -20,7 +20,11 @@ mismo. **Nunca enviás nada, ni completás formularios en la web, ni editás el 
 1. `.venv/bin/jobhunt app init <id>` devuelve la carpeta. Leé `posting.md`, `cv.json` y `tailoring.md`.
 2. `.venv/bin/jobhunt cv sources <carpeta>/cv.json` y hacé la auditoría semántica (sección 1 de la guía).
 3. `.venv/bin/jobhunt app form <id>` lee el formulario y lo guarda en `form.json`. Si no es
-   legible, el paquete se arma igual: decí en `review.md` que el formulario va a mano.
+   legible, el paquete se arma igual: decí en `review.md` que el formulario va a mano, y que si el
+   candidato abre "Apply" y pasa el link del formulario real, se relee con
+   `jobhunt app form <id> --url <link>`. Si te pasaron ese link, usalo desde el principio. Las notas
+   de `form.json` (por ejemplo, preguntas propias del aviso que no se ven desde afuera) van a
+   `review.md`, y el `help` de cada campo es parte de la pregunta.
 4. Escribí `<carpeta>/answers.json` con una entrada por campo.
 5. `.venv/bin/jobhunt app check <id>`. Corregí `answers.json` hasta que dé OK, o hasta que los
    únicos errores sean del CV.

@@ -25,7 +25,7 @@ from jobhunt.models import JobAnalysis, Preferences
 from jobhunt.profile import validate as validate_profile
 from jobhunt.salary import data_band, suggest as suggest_salary
 from jobhunt.policy import monthly_usd_amount
-from jobhunt.policy import decide, listing_filter_reason, title_priority, too_old
+from jobhunt.policy import company_excluded, decide, listing_filter_reason, title_priority, too_old
 from jobhunt.sources import ats_boards, getonbrd, himalayas, jobicy, manual, startups_argentina, wwr
 from jobhunt.sources.base import FetchContext
 from jobhunt.store import Store
@@ -88,7 +88,7 @@ def _fetch_source(source, client: PoliteClient, store: Store, prefs: Preferences
         new += store.upsert_stub(stub)
         if store.get(stub.id)["status"] not in ("listed", "filtered"):
             continue  # ya procesado en una corrida anterior
-        reason = listing_filter_reason(stub.title, stub.location, prefs)
+        reason = listing_filter_reason(stub.title, stub.location, prefs, stub.company)
         if not reason and listing.detail and too_old(listing.detail.posted_at, prefs):
             reason = "aviso viejo"
         if reason:
@@ -140,7 +140,7 @@ def cmd_add(args, store: Store) -> None:
         store.upsert_stub(stub)
         store.save_detail(stub.id, listing.detail)
         store.commit()
-        warning = listing_filter_reason(stub.title, stub.location, prefs)
+        warning = listing_filter_reason(stub.title, stub.location, prefs, stub.company)
         print(json.dumps({"id": stub.id, "title": stub.title, "company": stub.company,
                           "status": store.get(stub.id)["status"],
                           "warning": f"los filtros lo habrían descartado: {warning}" if warning else None},
@@ -253,8 +253,14 @@ def _ranking_table(rows) -> list[str]:
     return lines
 
 
+def _ranked(store: Store, **kwargs) -> list:
+    """El ranking sin las empresas excluidas en las preferencias (incluye las analizadas antes de excluirlas)."""
+    prefs = load_prefs()
+    return [r for r in store.ranked(**kwargs) if not company_excluded(r["company"], prefs)]
+
+
 def cmd_report(args, store: Store) -> None:
-    rows = store.ranked(include_gone=args.all, since=args.since)
+    rows = _ranked(store, include_gone=args.all, since=args.since)
     if args.decision:
         rows = [r for r in rows if r["decision"] in args.decision]
     if args.new:
@@ -266,7 +272,7 @@ def cmd_report(args, store: Store) -> None:
 def cmd_digest(args, store: Store) -> None:
     from datetime import date, datetime
 
-    rows = store.ranked(since=args.since)
+    rows = _ranked(store, since=args.since)
     candidates = [r for r in rows if r["decision"] in ("apply", "maybe") and not r["app_status"]]
     counts = {d: sum(r["decision"] == d for r in rows) for d in ("apply", "maybe", "skip")}
     out = [f"# Ciclo de búsqueda — {date.today().isoformat()}", ""]
@@ -431,20 +437,27 @@ def _app_folder(store: Store, job_id: str) -> Path:
 def cmd_app_form(args, store: Store) -> None:
     folder = _app_folder(store, args.job_id)
     row = store.get(args.job_id)
-    if not row["apply_url"]:
+    # Algunos agregadores (Himalayas) bloquean la lectura: el candidato abre "Apply" y pasa el link real.
+    url = args.url or row["apply_url"]
+    if not url:
         sys.exit("El aviso no tiene link de postulación.")
     with PoliteClient() as client:
         try:
-            form = fetch_form(client, row["apply_url"])
+            form = fetch_form(client, url)
         except Exception as err:  # 403, timeout, etc.: el paquete se arma igual, para completar a mano
-            form = ApplicationForm(url=row["apply_url"], system="unknown", extractable=False,
-                                   notes=[f"No se pudo leer el formulario ({type(err).__name__}: {err}); completarlo a mano."])
+            form = ApplicationForm(url=url, system="unknown", extractable=False, notes=[
+                f"No se pudo leer el formulario ({type(err).__name__}: {err}); completarlo a mano, o abrir "
+                f"Apply y pasar el link del formulario con `jobhunt app form {args.job_id} --url <link>`."])
+    if args.url:
+        form.notes.insert(0, "Link del formulario pasado a mano por el candidato.")
     (folder / "form.json").write_text(form.model_dump_json(indent=1), encoding="utf-8")
     print(f"Formulario: {form.system} ({'legible' if form.extractable else 'NO legible: revisar a mano'})")
     for note in form.notes:
         print(f"Nota: {note}")
     for f in form.fields:
         opts = f" opciones={f.options}" if f.options else ""
+        if f.min_length or f.max_length:
+            opts += f" largo={f.min_length or 0}-{f.max_length or '∞'}"
         print(f"- [{'obligatorio' if f.required else 'opcional'}] {f.id} | {f.type} | {f.label}{opts}")
     print(f"Guardado en {folder / 'form.json'}")
 
@@ -695,6 +708,7 @@ def main(argv: list[str] | None = None) -> None:
     a.set_defaults(func=cmd_app_set)
     a = app_sub.add_parser("form", help="Leer el formulario de postulación (sin enviar nada)")
     a.add_argument("job_id")
+    a.add_argument("--url", help="Link del formulario real, si el del aviso no se puede leer (ej. Himalayas)")
     a.set_defaults(func=cmd_app_form)
     a = app_sub.add_parser("check", help="Verificar CV, PDF y respuestas de una postulación")
     a.add_argument("job_id")

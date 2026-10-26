@@ -7,6 +7,7 @@ tecnologías estén respaldados por el perfil, y que los datos de contacto sean 
 
 from __future__ import annotations
 
+import re
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -36,6 +37,19 @@ class AnswerSheet(BaseModel):
     model_config = ConfigDict(extra="forbid")
     job_id: str
     answers: list[Answer]
+
+
+def _dial(phone: str) -> str:
+    """Los formularios piden el teléfono en formatos distintos; lo que tiene que coincidir es el número."""
+    return re.sub(r"[^\d+]", "", phone)
+
+
+def _text(node) -> str:
+    if isinstance(node, dict):
+        return " ".join(_text(v) for v in node.values())
+    if isinstance(node, list):
+        return " ".join(_text(v) for v in node)
+    return str(node)
 
 
 def check_answers(form: ApplicationForm, sheet: AnswerSheet, profile: dict) -> list[str]:
@@ -92,9 +106,15 @@ def check_answers(form: ApplicationForm, sheet: AnswerSheet, profile: dict) -> l
 
         if field.type in ("text", "textarea", "number"):
             text = " ".join(values)
+            length = len(text.strip())
+            if field.min_length and length < field.min_length:
+                errors.append(f"{where}: tiene {length} caracteres y el mínimo es {field.min_length}")
+            if field.max_length and length > field.max_length:
+                errors.append(f"{where}: tiene {length} caracteres y el máximo es {field.max_length}")
             allowed = normalize_numbers(idx.source_text(answer.source_ids))
             allowed |= normalize_numbers(" ".join(str(v) for v in person.values() if isinstance(v, str)))
             allowed |= normalize_numbers(" ".join((profile.get("languages") or {}).values()))
+            allowed |= normalize_numbers(_text(profile.get("education", [])))
             extra = normalize_numbers(text) - allowed
             if field.type in ("text", "textarea") and extra:
                 errors.append(f"{where}: números sin respaldo en las fuentes citadas: {sorted(extra)}")
@@ -103,6 +123,6 @@ def check_answers(form: ApplicationForm, sheet: AnswerSheet, profile: dict) -> l
 
         if field.type == "email" and values[0] != person["email"]:
             errors.append(f"{where}: el email no es el del perfil")
-        if field.type == "phone" and values[0] != person["phone"]:
+        if field.type == "phone" and _dial(values[0]) != _dial(person["phone"]):
             errors.append(f"{where}: el teléfono no es el del perfil")
     return errors

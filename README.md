@@ -22,14 +22,14 @@ with the LLM kept away from decisions that code can make.
 
 | Stage | Who decides | Why |
 |---|---|---|
-| Listing filter | Code (regex over title and location) | Cheap and predictable. Of 422 postings on the first run, 37 reached the LLM. |
+| Listing filter | Code (regex over title, location and excluded companies) | Cheap and predictable. Of 422 postings on the first run, 37 reached the LLM. |
 | Extraction and fit score | LLM (`job-scout`, Sonnet) against a versioned rubric | Reading a posting is a language task. Output is a Pydantic-validated JSON. |
 | Apply / maybe / skip | Code (`policy.py`) | Hard constraints (city for hybrid roles, remote-from-Argentina, salary floor, max years) must not depend on a model's mood. |
 | CV writing | LLM (`cv-tailor`, Opus) | Choosing and phrasing evidence for a specific reader is a writing task. |
 | CV verification | Code (`grounding.py`) | It's binary: either the CV is supported by the profile or it isn't. |
 | Semantic CV audit | LLM (`application-reviewer`, Opus), separate from the writer | Whether a rephrased bullet overstates its source takes reading. The agent that wrote the CV doesn't audit it. |
-| Form reading | Code (`forms.py`): Greenhouse API, Tally's embedded JSON, plain HTML forms | Field lists, types and options are structured data. No browser, nothing submitted. |
-| Form answers | LLM drafts, code verifies (`answers.py`) | Every required field answered or explicitly handed to me; options must exist; selected technologies and numbers must be backed by the profile; salary and dates are always my call. |
+| Form reading | Code (`forms.py`): Greenhouse API, Tally's embedded JSON, plain HTML forms, Get on Board's base form (it sits behind a login, but it's the same on every posting) | Field lists, types, options and length limits are structured data. No browser, nothing submitted. When an aggregator blocks reading, I open Apply and pass the real form's link (`jobhunt app form <id> --url`). |
+| Form answers | LLM drafts, code verifies (`answers.py`) | Every required field answered or explicitly handed to me; options must exist; texts must fit the field's length limits; selected technologies and numbers must be backed by the profile; salary and dates are always my call. |
 | Salary recommendation | Code (`salary.py`) | Takes the posted band if there is one. Otherwise it takes the 25th–75th percentile of comparable postings with published salaries, once there are 8 or more, or else a sourced market band for who's paying. Only regional boards count as data: the bands US companies post on global boards are for US hires, and on the first run they inflated the suggestion to more than twice the regional rate. The ask lands between 35% and 65% of the band depending on fit, never below my floor. It's only a suggestion: I type the number myself. |
 | Submitting | Me | Not automated, by design. |
 

@@ -2,7 +2,7 @@
 
 import json
 
-from jobhunt.forms import outbound_apply_link, parse_greenhouse, parse_html_form, parse_tally
+from jobhunt.forms import fetch_form, outbound_apply_link, parse_greenhouse, parse_html_form, parse_tally
 
 GREENHOUSE = {
     "questions": [
@@ -79,3 +79,15 @@ def test_link_de_postulacion_que_sale_del_agregador():
               <a class="apply-btn" href="https://jobs.lever.co/acme/123">Apply for this position</a>"""
     assert outbound_apply_link(html, "weworkremotely.com") == "https://jobs.lever.co/acme/123"
     assert outbound_apply_link("<a href='/apply'>Apply</a>", "himalayas.app") is None
+
+
+def test_getonbrd_devuelve_el_formulario_base_sin_pedir_nada():
+    form = fetch_form(None, "https://www.getonbrd.com/jobs/dev-acme-remote")
+    assert form.system == "getonbrd" and form.extractable
+    required = {f.id for f in form.fields if f.required}
+    assert required == {"experience", "education", "location", "salary", "why_company"}
+    by_id = {f.id: f for f in form.fields}
+    assert (by_id["experience"].min_length, by_id["experience"].max_length) == (300, 2000)
+    assert (by_id["why_company"].min_length, by_id["why_company"].max_length) == (50, 1000)
+    assert by_id["salary"].type == "number" and by_id["phone"].type == "phone"
+    assert any("preguntas propias" in n for n in form.notes)
